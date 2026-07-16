@@ -25,9 +25,10 @@ function SubmitComplaintPage() {
 
   return (
     <main className="container py-5">
-      <h1 className="mb-4">Submit Complaint</h1>
-
-      <div className="card shadow-sm">
+     <h1 className="text-white fw-bold mb-4">
+    Submit Complaint
+</h1>
+<div className="card shadow border-0 rounded-4">
         <div className="card-body">
 
           <form onSubmit={handleSubmit}>
@@ -69,7 +70,7 @@ function SubmitComplaintPage() {
               </label>
 
               <select
-                className="form-select"
+                className="form-select rounded-3"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
               >
@@ -86,7 +87,7 @@ function SubmitComplaintPage() {
 
               <textarea
                 rows={5}
-                className="form-control"
+                className="form-control rounded-3"
                 value={description}
                 onChange={(e) =>
                   setDescription(e.target.value)
@@ -101,14 +102,13 @@ function SubmitComplaintPage() {
 
               <input
                 type="file"
-                className="form-control"
+                className="form-control rounded-3"
               />
             </div>
 
-            <button
-              className="btn btn-primary"
+            <button className="btn btn-primary px-4 rounded-3">
               type="submit"
-            >
+            
               Submit Complaint
             </button>
 

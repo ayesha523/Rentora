@@ -1,14 +1,17 @@
 function TenantDashboard() {
   return (
     <main className="container py-5">
-      <h1 className="mb-4">Tenant Dashboard</h1>
-
+      <h1 className="mb-4 text-white fw-bold">
+    Tenant Dashboard
+</h1>
       <div className="row g-4">
 
         <div className="col-md-6">
           <div className="card shadow-sm">
             <div className="card-body">
-              <h5>Tenant Information</h5>
+             <h5 className="fw-bold">
+    Tenant Information
+</h5>
               <hr />
               <p><strong>Name:</strong> Sarah Zaman</p>
               <p><strong>Apartment:</strong> Green View Apartment</p>
@@ -55,11 +58,11 @@ function TenantDashboard() {
         </div>
 
         <div className="col-12">
-          <div className="card shadow-sm">
+          <div className="card shadow border-0 rounded-4">
             <div className="card-body">
               <h5>Recent Notices</h5>
               <div className="col-12">
-  <div className="card shadow-sm">
+ <div className="card shadow border-0 rounded-4">
     <div className="card-body">
       <h5>Payment History</h5>
       <hr />
