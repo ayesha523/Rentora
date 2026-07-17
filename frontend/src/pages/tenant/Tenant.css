@@ -1,0 +1,168 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+*{
+    font-family: "Inter", sans-serif;
+}
+
+.page-dark{
+    min-height:100vh;
+    padding:40px 0;
+
+    background:
+    radial-gradient(circle at 15% 15%, rgba(99,102,241,.30), transparent 35%),
+    radial-gradient(circle at 85% 20%, rgba(37,99,235,.25), transparent 35%),
+    radial-gradient(circle at 50% 100%, rgba(139,92,246,.20), transparent 45%),
+    #050816;
+}
+
+.page-title{
+    color:white;
+    font-weight:700;
+    margin-bottom:30px;
+}
+
+.glass-card{
+
+    background:rgba(255,255,255,.06);
+
+    backdrop-filter:blur(20px);
+
+    border:1px solid rgba(255,255,255,.10);
+
+    border-radius:22px;
+
+    box-shadow:
+    0 20px 40px rgba(0,0,0,.25);
+
+    color:white;
+
+    transition:.3s;
+}
+
+.glass-card:hover{
+
+    transform:translateY(-4px);
+
+    box-shadow:
+    0 24px 45px rgba(37,99,235,.20);
+
+}
+
+.glass-card h5{
+    color:white;
+    font-weight:600;
+}
+
+.glass-card hr{
+    border-color:rgba(255,255,255,.10);
+}
+
+.glass-card p,
+.glass-card li{
+    color:#cbd5e1;
+}
+
+.glass-card strong{
+    color:white;
+}
+
+.table-dark-custom{
+
+    color:white;
+
+}
+
+.table-dark-custom th{
+
+    color:#8b8eff;
+    border-color:rgba(255,255,255,.08);
+
+}
+
+.table-dark-custom td{
+
+    color:#dbeafe;
+    border-color:rgba(255,255,255,.08);
+
+}
+
+.badge.bg-success{
+
+    background:#22c55e !important;
+
+}
+
+.badge.bg-warning{
+
+    background:#facc15 !important;
+    color:black !important;
+
+}
+
+.btn-rentora{
+
+    background:linear-gradient(
+    135deg,
+    #6366f1,
+    #2563eb
+    );
+
+    border:none;
+
+    color:white;
+
+    border-radius:14px;
+
+    padding:12px 22px;
+
+    font-weight:600;
+
+    transition:.3s;
+
+}
+
+.btn-rentora:hover{
+
+    transform:translateY(-3px);
+
+}
+
+.form-control,
+.form-select{
+
+    background:rgba(255,255,255,.05);
+
+    color:white;
+
+    border:1px solid rgba(255,255,255,.12);
+
+}
+
+.form-control::placeholder{
+
+    color:#94a3b8;
+
+}
+
+.form-control:focus,
+.form-select:focus{
+
+    background:rgba(255,255,255,.05);
+
+    color:white;
+
+    border-color:#6366f1;
+
+    box-shadow:0 0 0 4px rgba(99,102,241,.15);
+
+}
+.rent-amount {
+    color: #52b8ff;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+textarea.form-control{
+    min-height:140px;
+    resize:none;
+}
