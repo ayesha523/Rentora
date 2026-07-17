@@ -22,6 +22,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role_id',
+        'phone',
     ];
 
     /**
@@ -45,5 +47,29 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * User belongs to a role.
+     */
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * User manages many apartments.
+     */
+    public function apartments()
+    {
+        return $this->hasMany(Apartment::class, 'manager_id');
+    }
+
+    /**
+     * User publishes many notices.
+     */
+    public function notices()
+    {
+        return $this->hasMany(Notice::class, 'published_by');
     }
 }
