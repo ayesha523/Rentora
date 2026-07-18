@@ -1,0 +1,109 @@
+.tenant-shell {
+  color: #f8fafc;
+  background: #050816;
+}
+
+.tenant-shell > .navbar {
+  position: relative;
+  top: auto;
+  z-index: 10;
+  width: 100%;
+  min-height: 64px;
+  margin: 0;
+  padding: 0.75rem 1rem !important;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  color: #f8fafc;
+  background: rgba(5, 8, 22, 0.94) !important;
+  backdrop-filter: blur(20px);
+}
+
+.tenant-shell > .navbar .navbar-brand {
+  color: #fff;
+}
+
+.tenant-shell > .navbar .badge {
+  color: #c7d2fe !important;
+  background: rgba(99, 102, 241, 0.16) !important;
+  border: 1px solid rgba(129, 140, 248, 0.28);
+}
+
+.tenant-shell__body {
+  min-height: calc(100vh - 64px);
+}
+
+.tenant-shell .sidebar {
+  width: 240px;
+  min-height: calc(100vh - 64px);
+  flex: 0 0 auto;
+  color: #cbd5e1;
+  background: rgba(9, 14, 35, 0.94) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.tenant-shell .sidebar h6 {
+  color: #64748b !important;
+}
+
+.tenant-shell .sidebar .nav-link {
+  color: #cbd5e1 !important;
+  border-radius: 12px;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.tenant-shell .sidebar .nav-link:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateX(2px);
+}
+
+.tenant-shell .sidebar .nav-link.active {
+  color: #fff !important;
+  background: linear-gradient(135deg, #6366f1, #2563eb);
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.24);
+}
+
+.tenant-shell .sidebar .nav-link.text-danger:not(.active) {
+  color: #fca5a5 !important;
+}
+
+.tenant-shell .nav-link:focus-visible,
+.tenant-shell .navbar-brand:focus-visible {
+  outline: 3px solid #52b8ff;
+  outline-offset: 3px;
+}
+
+.tenant-shell__content {
+  min-width: 0;
+  background: #050816;
+}
+
+@media (max-width: 767.98px) {
+  .tenant-shell__body {
+    flex-direction: column;
+  }
+
+  .tenant-shell .sidebar {
+    width: 100%;
+    min-height: auto;
+    padding: 0.75rem !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .tenant-shell .sidebar h6 {
+    margin-bottom: 0.5rem !important;
+  }
+
+  .tenant-shell .sidebar .nav {
+    flex-direction: row !important;
+    gap: 0.4rem !important;
+  }
+
+  .tenant-shell .sidebar .nav-link {
+    margin-top: 0 !important;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.8rem;
+  }
+}

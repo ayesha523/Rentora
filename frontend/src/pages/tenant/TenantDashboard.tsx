@@ -77,13 +77,14 @@ function TenantDashboard() {
                 <h5>Payment History</h5>
                 <hr />
 
-                <table className="table table-dark-custom">
+                <div className="table-responsive tenant-table-wrap">
+                <table className="table table-dark-custom mb-0">
 
                   <thead>
                     <tr>
-                      <th>Month</th>
-                      <th>Amount</th>
-                      <th>Status</th>
+                      <th scope="col">Month</th>
+                      <th scope="col">Amount</th>
+                      <th scope="col">Status</th>
                     </tr>
                   </thead>
 
@@ -112,6 +113,7 @@ function TenantDashboard() {
                   </tbody>
 
                 </table>
+                </div>
 
               </div>
             </div>
