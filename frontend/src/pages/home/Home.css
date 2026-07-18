@@ -82,7 +82,7 @@ body {
    NAVBAR
 ========================= */
 
-.navbar {
+.home > .navbar {
   width: min(1200px, 92%);
   margin: 24px auto;
 
@@ -105,7 +105,7 @@ body {
   border-radius: 20px;
 }
 
-.logo {
+.home > .navbar .logo {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -114,7 +114,7 @@ body {
   font-weight: 700;
 }
 
-.logo-box {
+.home > .navbar .logo-box {
   width: 42px;
   height: 42px;
 
@@ -132,20 +132,45 @@ body {
   box-shadow: 0 0 25px rgba(99, 102, 241, 0.45);
 }
 
-.nav-links {
+.home > .navbar .nav-links {
   display: flex;
   align-items: center;
   gap: 28px;
 }
 
-.nav-links a {
+.home > .navbar .nav-links a {
   text-decoration: none;
   color: #dbe4f1;
   transition: 0.3s;
 }
 
-.nav-links a:hover {
+.home > .navbar .nav-links a:hover {
   color: white;
+}
+
+.home > .navbar .nav-links .nav-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 1px solid rgba(129, 140, 248, 0.45);
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.28);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.home > .navbar .nav-links .nav-login:hover {
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.38);
+}
+
+.home > .navbar .nav-links .nav-login:focus-visible {
+  outline: 3px solid #52b8ff;
+  outline-offset: 3px;
 }
 
 /* =========================
@@ -461,8 +486,12 @@ body {
     font-size: 3rem;
   }
 
-  .nav-links a {
+  .home > .navbar .nav-links .nav-section-link {
     display: none;
+  }
+
+  .home > .navbar .nav-links {
+    gap: 0;
   }
 
   .benefits-grid {

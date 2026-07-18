@@ -1,18 +1,22 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import "./Auth.css";
+
+type UserRole = "tenant" | "manager";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("tenant");
+  const [role, setRole] = useState<UserRole>("tenant");
   const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -64,7 +68,13 @@ export default function LoginPage() {
 
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onChange={(e) => {
+              const selectedRole = e.target.value;
+
+              if (selectedRole === "tenant" || selectedRole === "manager") {
+                setRole(selectedRole);
+              }
+            }}
           >
             <option value="tenant">Tenant</option>
             <option value="manager">Apartment Manager</option>

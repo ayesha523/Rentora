@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import "./Home.css";
 
 const features = [
@@ -59,9 +60,12 @@ export default function Home() {
         </div>
 
         <div className="nav-links">
-          <a href="#features">Features</a>
-          <a href="#why">Why Rentora</a>
-          <a href="/login">Login</a>
+          <a className="nav-section-link" href="#features">Features</a>
+          <a className="nav-section-link" href="#why">Why Rentora</a>
+          <Link className="nav-login" to="/login">
+            <i className="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+            Login
+          </Link>
         </div>
       </nav>
 
