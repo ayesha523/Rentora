@@ -7,6 +7,7 @@ interface StatCardProps {
 function StatCard({ stat }: StatCardProps) {
   return (
     <article className={`manager-stat-card manager-stat-card--${stat.accent}`}>
+      <span className="manager-stat-card__highlight" aria-hidden="true" />
       <div className="manager-stat-card__top">
         <div className="manager-stat-card__icon" aria-hidden="true">
           <i className={`bi ${stat.icon}`} />
