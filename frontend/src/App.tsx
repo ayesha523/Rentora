@@ -2,23 +2,25 @@ import {
   Navigate,
   Route,
   Routes,
-} from 'react-router-dom';
+} from "react-router-dom";
 
-import Home from './pages/home/Home';
-import AuthLayout from './layouts/AuthLayout';
-import ManagerLayout from './layouts/ManagerLayout';
-import TenantLayout from './layouts/TenantLayout';
+import Home from "./pages/home/Home";
+import AuthLayout from "./layouts/AuthLayout";
+import ManagerLayout from "./layouts/ManagerLayout";
+import TenantLayout from "./layouts/TenantLayout";
 
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import ManagerDashboard from './pages/manager/ManagerDashboard';
-import TenantDashboard from './pages/tenant/TenantDashboard';
-import SubmitComplaintPage from './pages/tenant/SubmitComplaintPage';
-import NotFoundPage from './pages/NotFoundPage';
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import ManagerDashboard from "./pages/manager/ManagerDashboard";
+import TenantDashboard from "./pages/tenant/TenantDashboard";
+import SubmitComplaintPage from "./pages/tenant/SubmitComplaintPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
+      {/* Public pages */}
       <Route path="/" element={<Home />} />
 
       <Route element={<AuthLayout />}>
@@ -26,33 +28,46 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
       </Route>
 
-      <Route path="/manager" element={<ManagerLayout />}>
-        <Route
-          index
-          element={<Navigate to="dashboard" replace />}
-        />
-        <Route
-          path="dashboard"
-          element={<ManagerDashboard />}
-        />
+      {/* Manager protected routes */}
+      <Route element={<ProtectedRoute role="manager" />}>
+        <Route path="/manager" element={<ManagerLayout />}>
+          <Route
+            index
+            element={<Navigate to="dashboard" replace />}
+          />
+
+          <Route
+            path="dashboard"
+            element={<ManagerDashboard />}
+          />
+        </Route>
       </Route>
 
-      <Route path="/tenant" element={<TenantLayout />}>
-        <Route
-          index
-          element={<Navigate to="dashboard" replace />}
-        />
-        <Route
-          path="dashboard"
-          element={<TenantDashboard />}
-        />
-        <Route
-          path="complaints/new"
-          element={<SubmitComplaintPage />}
-        />
+      {/* Tenant protected routes */}
+      <Route element={<ProtectedRoute role="tenant" />}>
+        <Route path="/tenant" element={<TenantLayout />}>
+          <Route
+            index
+            element={<Navigate to="dashboard" replace />}
+          />
+
+          <Route
+            path="dashboard"
+            element={<TenantDashboard />}
+          />
+
+          <Route
+            path="complaints/new"
+            element={<SubmitComplaintPage />}
+          />
+        </Route>
       </Route>
 
-      <Route path="*" element={<NotFoundPage />} />
+      {/* 404 */}
+      <Route
+        path="*"
+        element={<NotFoundPage />}
+      />
     </Routes>
   );
 }
