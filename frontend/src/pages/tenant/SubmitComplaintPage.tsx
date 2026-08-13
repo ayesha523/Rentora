@@ -1,53 +1,199 @@
-import "./Tenant.css";
+import { useState } from 'react';
+import './Tenant.css';
+
+type FormState = {
+  subject: string;
+  category: string;
+  priority: string;
+  description: string;
+  unit: string;
+  contactMethod: string;
+};
+
+const initialForm: FormState = {
+  subject: '',
+  category: 'Maintenance',
+  priority: 'Normal',
+  description: '',
+  unit: 'Flat B-406',
+  contactMethod: 'Email',
+};
 
 function SubmitComplaintPage() {
+  const [form, setForm] = useState<FormState>(initialForm);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const handleChange = (field: keyof FormState, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+    setIsSubmitted(false);
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const nextErrors: Partial<Record<keyof FormState, string>> = {};
+    if (!form.subject.trim()) nextErrors.subject = 'Please enter a complaint title.';
+    if (!form.description.trim()) nextErrors.description = 'Please provide a brief description of the issue.';
+    if (!form.unit.trim()) nextErrors.unit = 'Please confirm your unit.';
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      setIsSubmitted(false);
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitted(true);
+  };
+
   return (
     <main className="page-dark">
-
-      <div className="container">
-
-        <h1 className="page-title">
-          Submit Complaint
-        </h1>
-
-        <div className="card glass-card">
-
-          <div className="card-body">
-
-            <div className="mb-3">
-              <label className="form-label text-white">
-                Subject
-              </label>
-
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Enter complaint subject"
-              />
+      <div className="tenant-page-shell tenant-page-shell--narrow">
+        <div className="tenant-two-column-layout tenant-two-column-layout--complaint">
+          <section className="tenant-panel tenant-panel--form">
+            <div className="tenant-panel__header">
+              <div>
+                <span className="tenant-panel__eyebrow">Report Issue</span>
+                <h3>Submit Complaint</h3>
+              </div>
             </div>
 
-            <div className="mb-3">
-              <label className="form-label text-white">
-                Description
+            <form className="tenant-form" onSubmit={handleSubmit} noValidate>
+              <div className="tenant-form__grid">
+                <label className="tenant-field">
+                  <span>Complaint subject</span>
+                  <input
+                    type="text"
+                    value={form.subject}
+                    onChange={(event) => handleChange('subject', event.target.value)}
+                    placeholder="Enter complaint title"
+                    className={errors.subject ? 'has-error' : ''}
+                  />
+                  {errors.subject && <small className="tenant-field__error">{errors.subject}</small>}
+                </label>
+
+                <label className="tenant-field">
+                  <span>Apartment / Unit</span>
+                  <input
+                    type="text"
+                    value={form.unit}
+                    onChange={(event) => handleChange('unit', event.target.value)}
+                    placeholder="Flat B-406"
+                    className={errors.unit ? 'has-error' : ''}
+                  />
+                  {errors.unit && <small className="tenant-field__error">{errors.unit}</small>}
+                </label>
+
+                <label className="tenant-field">
+                  <span>Category</span>
+                  <select value={form.category} onChange={(event) => handleChange('category', event.target.value)}>
+                    <option>Plumbing</option>
+                    <option>Electrical</option>
+                    <option>Maintenance</option>
+                    <option>Security</option>
+                    <option>Cleaning</option>
+                    <option>Noise</option>
+                    <option>Other</option>
+                  </select>
+                </label>
+
+                <label className="tenant-field">
+                  <span>Priority</span>
+                  <select value={form.priority} onChange={(event) => handleChange('priority', event.target.value)}>
+                    <option>Low</option>
+                    <option>Normal</option>
+                    <option>High</option>
+                    <option>Urgent</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="tenant-field">
+                <span>Detailed description</span>
+                <textarea
+                  rows={6}
+                  value={form.description}
+                  onChange={(event) => handleChange('description', event.target.value)}
+                  placeholder="Describe the issue, when it started, and any relevant details."
+                  className={errors.description ? 'has-error' : ''}
+                />
+                {errors.description && <small className="tenant-field__error">{errors.description}</small>}
               </label>
 
-              <textarea
-                rows={5}
-                className="form-control"
-                placeholder="Describe your issue..."
-              ></textarea>
+              <label className="tenant-field">
+                <span>Preferred contact method</span>
+                <select value={form.contactMethod} onChange={(event) => handleChange('contactMethod', event.target.value)}>
+                  <option>Email</option>
+                  <option>Phone</option>
+                  <option>WhatsApp</option>
+                </select>
+              </label>
+
+              <div className="tenant-upload-box">
+                <div className="tenant-upload-box__content">
+                  <div className="tenant-upload-box__icon">
+                    <i className="bi bi-cloud-upload" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <strong>Upload photos or documents</strong>
+                    <p>Drag and drop files here or browse from your device.</p>
+                  </div>
+                </div>
+                <input type="file" multiple aria-label="Upload complaint attachments" />
+              </div>
+
+              <div className="tenant-form__help">
+                Please include the exact location, frequency, and any safety concerns so the team can respond quickly.
+              </div>
+
+              {isSubmitted && (
+                <div className="tenant-success-banner">
+                  <i className="bi bi-check-circle-fill" aria-hidden="true" />
+                  Complaint submitted successfully. The management team will review it shortly.
+                </div>
+              )}
+
+              <div className="tenant-actions-row tenant-actions-row--align-end">
+                <button type="button" className="btn btn-secondary btn-secondary--compact">
+                  Save Draft
+                </button>
+                <button type="submit" className="btn btn-rentora btn-rentora--compact">
+                  Submit Complaint
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <aside className="tenant-panel tenant-panel--support">
+            <div className="tenant-panel__header">
+              <div>
+                <span className="tenant-panel__eyebrow">Support</span>
+                <h3>Need urgent help?</h3>
+              </div>
             </div>
 
-            <button className="btn btn-rentora">
-              Submit Complaint
-            </button>
+            <div className="tenant-support-card">
+              <div className="tenant-support-card__block">
+                <span className="tenant-support-card__label">Expected response</span>
+                <strong>Within 24 hours</strong>
+              </div>
 
-          </div>
+              <div className="tenant-support-card__block">
+                <span className="tenant-support-card__label">Emergency guidance</span>
+                <strong>For urgent safety issues, call the building emergency line immediately.</strong>
+              </div>
 
+              <div className="tenant-support-card__block">
+                <span className="tenant-support-card__label">Contact</span>
+                <strong>+880 1700-000111</strong>
+                <small>support@rentora.com</small>
+              </div>
+            </div>
+          </aside>
         </div>
-
       </div>
-
     </main>
   );
 }
