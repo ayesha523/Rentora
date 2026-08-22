@@ -54,7 +54,7 @@ function ManagerPreview({ compact = false }: { compact?: boolean }) {
     <div className={`dashboard-mock manager-mock ${compact ? "compact" : ""}`} aria-label="Rentora manager dashboard preview">
       <div className="mock-sidebar"><Brand /><span className="mock-side-active"><i className="bi bi-grid" /> Overview</span><span><i className="bi bi-buildings" /> Apartments</span><span><i className="bi bi-people" /> Tenants</span><span><i className="bi bi-wallet2" /> Payments</span></div>
       <div className="mock-main">
-        <div className="mock-top"><div><small>MANAGER PORTAL</small><strong>Good morning, Maya</strong></div><span className="mock-avatar">MS</span></div>
+        <div className="mock-top"><div><small>MANAGER PORTAL</small><strong>Good morning, Manager</strong></div><span className="mock-avatar"><i className="bi bi-person" aria-hidden="true" /></span></div>
         <div className="mock-stats">
           <div><i className="bi bi-buildings" /><small>Total units</small><strong>48</strong><em>4 buildings</em></div>
           <div><i className="bi bi-key" /><small>Occupancy</small><strong>92%</strong><em className="positive">+3% this month</em></div>

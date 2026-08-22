@@ -3,7 +3,7 @@ import StatCard from '../../dashboard/StatCard';
 import { dashboardStats } from '../../../data/managerDashboardData';
 import type { ManagerSection } from '../../../data/managerManagementData';
 
-interface OverviewSectionProps { onNavigate: (section: ManagerSection) => void; onComingSoon: (message: string) => void; }
+interface OverviewSectionProps { firstName: string; onNavigate: (section: ManagerSection) => void; onComingSoon: (message: string) => void; }
 
 const quickActions: readonly { label: string; icon: string; section: ManagerSection }[] = [
   { label: 'Add apartment', icon: 'bi-building-add', section: 'apartments' },
@@ -14,8 +14,10 @@ const quickActions: readonly { label: string; icon: string; section: ManagerSect
   { label: 'Review complaints', icon: 'bi-chat-square-text', section: 'complaints' },
 ];
 
-function OverviewSection({ onNavigate, onComingSoon }: OverviewSectionProps) {
+function OverviewSection({ firstName, onNavigate, onComingSoon }: OverviewSectionProps) {
   const month = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date());
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   return (
     <div className="manager-section manager-section--overview">
       <section className="manager-welcome">
@@ -24,7 +26,7 @@ function OverviewSection({ onNavigate, onComingSoon }: OverviewSectionProps) {
             <span className="manager-welcome__eyebrow"><i aria-hidden="true" /> Portfolio overview</span>
             <div className="manager-welcome__month" aria-label={`Current reporting period: ${month}`}><i className="bi bi-calendar3" aria-hidden="true" /><span><small>Reporting period</small><strong>{month}</strong></span></div>
           </div>
-          <h1>Good morning, <span>Maya.</span></h1>
+          <h1>{greeting}, <span>{firstName}.</span></h1>
           <p>Your portfolio is performing steadily. Review today’s priorities and keep every property moving forward.</p>
           <div className="manager-welcome__actions">
             <button type="button" onClick={() => onNavigate('complaints')}>Review priorities <i className="bi bi-arrow-right" aria-hidden="true" /></button>

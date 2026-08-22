@@ -24,7 +24,7 @@ export const managerNavigation: readonly ManagerNavigationItem[] = [
 ];
 
 export const apartments: readonly Apartment[] = [
-  { id: 1, name: 'Aurora Heights', address: '12 Lake View Road, Dhaka', flats: 16, occupied: 14, vacant: 2, contact: 'Maya Sultana · 01711-204810', status: 'Active', image: 'bi-building' },
+  { id: 1, name: 'Aurora Heights', address: '12 Lake View Road, Dhaka', flats: 16, occupied: 14, vacant: 2, contact: 'Property office · 01711-204810', status: 'Active', image: 'bi-building' },
   { id: 2, name: 'Rentora Garden', address: '28 Green Avenue, Dhaka', flats: 12, occupied: 10, vacant: 2, contact: 'Rafi Ahmed · 01816-330912', status: 'Active', image: 'bi-buildings-fill' },
   { id: 3, name: 'Bluebell Residence', address: '7 North Crescent, Dhaka', flats: 10, occupied: 8, vacant: 2, contact: 'Nadia Karim · 01912-408115', status: 'Maintenance', image: 'bi-building-gear' },
   { id: 4, name: 'Parkside Court', address: '44 Park Lane, Dhaka', flats: 10, occupied: 7, vacant: 3, contact: 'Imran Hasan · 01620-775014', status: 'Active', image: 'bi-building-check' },
