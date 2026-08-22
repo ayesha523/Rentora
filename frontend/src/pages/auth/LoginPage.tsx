@@ -218,7 +218,9 @@ export default function LoginPage() {
               <div className="auth-field">
                 <div className="label-row">
                   <label htmlFor="login-password">Password</label>
-                  <span>Secure access</span>
+                  <Link className="forgot-password-link" to="/forgot-password">
+                    Forgot password?
+                  </Link>
                 </div>
 
                 <div className="auth-input-wrap">
