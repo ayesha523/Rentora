@@ -11,6 +11,8 @@ import ManagerLayout from "./layouts/ManagerLayout";
 import TenantLayout from "./layouts/TenantLayout";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import TenantDashboard from "./pages/tenant/TenantDashboard";
 import SubmitComplaintPage from "./pages/tenant/SubmitComplaintPage";
@@ -31,6 +33,8 @@ function App() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       {/* Manager protected routes */}
