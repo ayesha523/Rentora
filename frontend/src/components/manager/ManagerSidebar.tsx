@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { managerNavigation, type ManagerSection } from '../../data/managerManagementData';
+import { useAuth } from '../../context/AuthContext';
 
 interface ManagerSidebarProps {
   activeSection: ManagerSection;
@@ -9,6 +10,14 @@ interface ManagerSidebarProps {
 }
 
 function ManagerSidebar({ activeSection, isOpen, onSelect, onClose }: ManagerSidebarProps) {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <>
       <button className={`manager-sidebar-backdrop ${isOpen ? 'is-open' : ''}`} type="button" aria-label="Close manager menu" onClick={onClose} />
@@ -44,9 +53,9 @@ function ManagerSidebar({ activeSection, isOpen, onSelect, onClose }: ManagerSid
 
         <div className="manager-sidebar__footer">
           <div className="manager-sidebar__support"><i className="bi bi-shield-check" aria-hidden="true" /><span><strong>Portfolio healthy</strong><small>All systems operational</small></span></div>
-          <Link to="/login" className="manager-sidebar__logout" aria-label="Log out of manager portal">
+          <button type="button" className="manager-sidebar__logout" aria-label="Log out of manager portal" onClick={handleLogout}>
             <i className="bi bi-box-arrow-right" aria-hidden="true" /> Logout
-          </Link>
+          </button>
         </div>
       </aside>
     </>

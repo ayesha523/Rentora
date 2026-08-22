@@ -13,13 +13,17 @@ import {
   UtilitiesSection,
 } from '../../components/manager/sections/ManagementSections';
 import { managerNavigation, type ManagerSection } from '../../data/managerManagementData';
+import { useAuth } from '../../context/AuthContext';
+import { getAuthenticatedUserIdentity } from '../../utils/authDisplay';
 import '../../styles/manager-dashboard.css';
 
 function ManagerDashboard() {
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState<ManagerSection>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const currentSection = managerNavigation.find((item) => item.id === activeSection) ?? managerNavigation[0];
+  const identity = getAuthenticatedUserIdentity(user);
 
   useEffect(() => {
     document.title = `${currentSection.shortLabel} | Rentora Manager`;
@@ -42,7 +46,7 @@ function ManagerDashboard() {
 
   const renderActiveSection = () => {
     switch (activeSection) {
-      case 'overview': return <OverviewSection onNavigate={selectSection} onComingSoon={setAnnouncement} />;
+      case 'overview': return <OverviewSection firstName={identity.firstName} onNavigate={selectSection} onComingSoon={setAnnouncement} />;
       case 'apartments': return <ApartmentsSection />;
       case 'flats': return <FlatsSection />;
       case 'tenants': return <TenantsSection />;
@@ -58,7 +62,7 @@ function ManagerDashboard() {
     <div className="manager-app-shell">
       <ManagerSidebar activeSection={activeSection} isOpen={mobileMenuOpen} onSelect={selectSection} onClose={() => setMobileMenuOpen(false)} />
       <div className="manager-app-main">
-        <ManagerTopbar section={currentSection} onMenuOpen={() => setMobileMenuOpen(true)} />
+        <ManagerTopbar identity={identity} section={currentSection} onMenuOpen={() => setMobileMenuOpen(true)} />
         <main className="manager-app-content">
           <p className="visually-hidden" role="status" aria-live="polite">{announcement || `${currentSection.label} selected`}</p>
           <div key={activeSection} className="manager-section-transition">{renderActiveSection()}</div>

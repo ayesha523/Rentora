@@ -1,11 +1,13 @@
 import type { ManagerNavigationItem } from '../../data/managerManagementData';
+import type { AuthenticatedUserIdentity } from '../../utils/authDisplay';
 
 interface ManagerTopbarProps {
   section: ManagerNavigationItem;
+  identity: AuthenticatedUserIdentity;
   onMenuOpen: () => void;
 }
 
-function ManagerTopbar({ section, onMenuOpen }: ManagerTopbarProps) {
+function ManagerTopbar({ section, identity, onMenuOpen }: ManagerTopbarProps) {
   return (
     <header className="manager-topbar">
       <div className="manager-topbar__heading">
@@ -29,8 +31,8 @@ function ManagerTopbar({ section, onMenuOpen }: ManagerTopbarProps) {
           <i className="bi bi-bell" aria-hidden="true" /><span aria-hidden="true" />
         </button>
         <button type="button" className="manager-profile" aria-label="Open manager profile">
-          <span className="manager-profile__avatar">MS</span>
-          <span className="manager-profile__copy"><strong>Maya Sultana</strong><small>Property Manager</small></span>
+          <span className="manager-profile__avatar" aria-hidden="true">{identity.initials}</span>
+          <span className="manager-profile__copy"><strong>{identity.displayName}</strong><small>{identity.roleLabel}</small></span>
           <i className="bi bi-chevron-down" aria-hidden="true" />
         </button>
       </div>
