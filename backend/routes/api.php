@@ -30,6 +30,21 @@ Route::post('/login', [AuthController::class, 'login']);
 
 /*
 |--------------------------------------------------------------------------
+| Password Recovery Routes
+|--------------------------------------------------------------------------
+|
+| These routes do not require authentication.
+|
+*/
+
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+    ->middleware('throttle:forgot-password');
+
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+    ->middleware('throttle:reset-password');
+
+/*
+|--------------------------------------------------------------------------
 | Protected Routes
 |--------------------------------------------------------------------------
 |

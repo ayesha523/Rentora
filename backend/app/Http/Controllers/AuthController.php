@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
@@ -46,12 +47,11 @@ class AuthController extends Controller
         /*
          * Create the user.
          *
-         * The User model contains:
+         * User model contains:
          *
          * 'password' => 'hashed'
          *
-         * in casts(), so Laravel automatically hashes
-         * the password before saving it.
+         * so Laravel automatically hashes the password.
          */
         $user = User::create([
             'name' => $request->name,
@@ -122,6 +122,147 @@ class AuthController extends Controller
                 'role' => $user->role?->name,
             ],
         ], 200);
+    }
+
+    /**
+     * Request a password reset link.
+     *
+     * Always returns the same public response so that
+     * account existence cannot be discovered.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        /*
+         * Laravel's password broker:
+         *
+         * - finds the user
+         * - generates a secure token
+         * - stores it in password_reset_tokens
+         * - sends the reset notification
+         */
+        Password::broker('users')->sendResetLink([
+            'email' => $request->email,
+        ]);
+
+        /*
+         * IMPORTANT:
+         * Never reveal whether the email exists.
+         */
+        return response()->json([
+            'success' => true,
+            'message' => 'If an account exists for that email address, a password reset link has been sent.',
+        ], 200);
+    }
+
+    /**
+     * Reset the user's password.
+     */
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        /*
+         * Laravel verifies:
+         *
+         * - email
+         * - reset token
+         * - token expiry
+         * - token validity
+         *
+         * On success, Laravel also invalidates the reset token.
+         */
+        $status = Password::broker('users')->reset(
+            [
+                'email' => $request->email,
+                'password' => $request->password,
+                'password_confirmation' => $request->password_confirmation,
+                'token' => $request->token,
+            ],
+            function (User $user, string $password) {
+
+                /*
+                 * User model uses:
+                 *
+                 * 'password' => 'hashed'
+                 *
+                 * so assigning the plain password here causes
+                 * Laravel to hash it automatically.
+                 */
+                $user->password = $password;
+
+                /*
+                 * Clear the remember token as an additional
+                 * security measure.
+                 */
+                $user->setRememberToken(
+                    \Illuminate\Support\Str::random(60)
+                );
+
+                $user->save();
+
+                /*
+                 * Revoke all existing Sanctum authentication tokens.
+                 *
+                 * This logs the user out from existing API sessions.
+                 */
+                $user->tokens()->delete();
+            }
+        );
+
+        /*
+         * Password successfully changed.
+         */
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Password reset successful. Please log in with your new password.',
+            ], 200);
+        }
+
+        /*
+         * Invalid or expired reset token.
+         */
+        if (
+            $status === Password::INVALID_TOKEN ||
+            $status === Password::INVALID_USER
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This password reset link is invalid or has expired.',
+            ], 400);
+        }
+
+        /*
+         * Fallback for other password broker failures.
+         */
+        return response()->json([
+            'success' => false,
+            'message' => 'Unable to reset the password. Please request a new password reset link.',
+        ], 400);
     }
 
     /**
