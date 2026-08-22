@@ -52,7 +52,7 @@ function ManagerSidebar({ activeSection, isOpen, onSelect, onClose }: ManagerSid
         </nav>
 
         <div className="manager-sidebar__footer">
-          <div className="manager-sidebar__support"><i className="bi bi-shield-check" aria-hidden="true" /><span><strong>Portfolio healthy</strong><small>All systems operational</small></span></div>
+          <div className="manager-sidebar__support"><i className="bi bi-info-circle" aria-hidden="true" /><span><strong>Portfolio status</strong><small>Data unavailable</small></span></div>
           <button type="button" className="manager-sidebar__logout" aria-label="Log out of manager portal" onClick={handleLogout}>
             <i className="bi bi-box-arrow-right" aria-hidden="true" /> Logout
           </button>

@@ -23,8 +23,14 @@ export function FilterSelect({ label, value, options, onChange }: { label: strin
   );
 }
 
-export function EmptyState() {
-  return <div className="manager-empty"><span><i className="bi bi-search" aria-hidden="true" /></span><strong>No matching records</strong><p>Try a broader search or clear one of the active filters.</p></div>;
+export function EmptyState({
+  title = 'No data yet',
+  description = 'Records will appear here when manager data is available.',
+}: {
+  title?: string;
+  description?: string;
+}) {
+  return <div className="manager-empty"><span><i className="bi bi-inbox" aria-hidden="true" /></span><strong>{title}</strong><p>{description}</p></div>;
 }
 
 export function DetailDrawer({ title, subtitle, open, onClose, children }: { title: string; subtitle: string; open: boolean; onClose: () => void; children: ReactNode }) {

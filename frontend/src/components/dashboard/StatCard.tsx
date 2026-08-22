@@ -15,7 +15,7 @@ function StatCard({ stat }: StatCardProps) {
         <i className="bi bi-arrow-up-right manager-stat-card__arrow" aria-hidden="true" />
       </div>
       <p className="manager-stat-card__label">{stat.label}</p>
-      <p className="manager-stat-card__value">{stat.value}</p>
+      <p className="manager-stat-card__value">{stat.value ?? '—'}</p>
       <p className="manager-stat-card__description">{stat.description}</p>
     </article>
   );

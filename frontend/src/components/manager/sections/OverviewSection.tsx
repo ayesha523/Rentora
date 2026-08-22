@@ -1,9 +1,13 @@
 import SectionHeader from '../../dashboard/SectionHeader';
 import StatCard from '../../dashboard/StatCard';
-import { dashboardStats } from '../../../data/managerDashboardData';
+import { managerDashboardData } from '../../../data/managerDashboardData';
 import type { ManagerSection } from '../../../data/managerManagementData';
 
-interface OverviewSectionProps { firstName: string; onNavigate: (section: ManagerSection) => void; onComingSoon: (message: string) => void; }
+interface OverviewSectionProps {
+  firstName: string;
+  onNavigate: (section: ManagerSection) => void;
+  onComingSoon: (message: string) => void;
+}
 
 const quickActions: readonly { label: string; icon: string; section: ManagerSection }[] = [
   { label: 'Add apartment', icon: 'bi-building-add', section: 'apartments' },
@@ -15,51 +19,70 @@ const quickActions: readonly { label: string; icon: string; section: ManagerSect
 ];
 
 function OverviewSection({ firstName, onNavigate, onComingSoon }: OverviewSectionProps) {
-  const month = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date());
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const { reportingPeriod, stats, featuredProperty, attentionItems, occupancy } = managerDashboardData;
+
   return (
     <div className="manager-section manager-section--overview">
       <section className="manager-welcome">
         <div className="manager-welcome__content">
           <div className="manager-welcome__meta">
             <span className="manager-welcome__eyebrow"><i aria-hidden="true" /> Portfolio overview</span>
-            <div className="manager-welcome__month" aria-label={`Current reporting period: ${month}`}><i className="bi bi-calendar3" aria-hidden="true" /><span><small>Reporting period</small><strong>{month}</strong></span></div>
+            <div className="manager-welcome__month" aria-label={reportingPeriod ? `Current reporting period: ${reportingPeriod}` : 'Reporting period unavailable'}>
+              <i className="bi bi-calendar3" aria-hidden="true" />
+              <span><small>Reporting period</small><strong>{reportingPeriod ?? '—'}</strong></span>
+            </div>
           </div>
           <h1>{greeting}, <span>{firstName}.</span></h1>
-          <p>Your portfolio is performing steadily. Review today’s priorities and keep every property moving forward.</p>
+          <p>Portfolio insights will appear here when verified property data becomes available.</p>
           <div className="manager-welcome__actions">
             <button type="button" onClick={() => onNavigate('complaints')}>Review priorities <i className="bi bi-arrow-right" aria-hidden="true" /></button>
-            <span><i className="bi bi-check-circle-fill" aria-hidden="true" /> Portfolio operations are healthy</span>
+            <span><i className="bi bi-info-circle" aria-hidden="true" /> Portfolio status unavailable</span>
           </div>
         </div>
-        <figure className="manager-welcome__visual">
-          <img src="/images/manager/overview-property.png" alt="Aurora Heights apartment property at blue hour" />
-          <div className="manager-welcome__visual-shade" aria-hidden="true" />
-          <figcaption>
-            <span><i className="bi bi-stars" aria-hidden="true" /> Featured property</span>
-            <div><strong>Aurora Heights</strong><small>14 of 16 flats occupied</small></div>
-            <button type="button" aria-label="View Aurora Heights in Apartment Management" onClick={() => onNavigate('apartments')}><i className="bi bi-arrow-up-right" aria-hidden="true" /></button>
-          </figcaption>
-          <div className="manager-welcome__occupancy"><span>Occupancy</span><strong>87.5%</strong></div>
+
+        <figure className="manager-welcome__visual manager-welcome__empty-feature">
+          {featuredProperty ? (
+            <>
+              {featuredProperty.imageUrl && <img src={featuredProperty.imageUrl} alt="" />}
+              <figcaption><span>Featured property</span><div><strong>{featuredProperty.name}</strong><small>{featuredProperty.occupancyLabel ?? 'Occupancy unavailable'}</small></div></figcaption>
+            </>
+          ) : (
+            <figcaption>
+              <span><i className="bi bi-stars" aria-hidden="true" /> Featured property</span>
+              <div><strong>No featured property available</strong><small>Property details will appear when connected.</small></div>
+            </figcaption>
+          )}
         </figure>
       </section>
 
-      <section aria-labelledby="dashboard-summary-title"><h2 id="dashboard-summary-title" className="visually-hidden">Property summary</h2><div className="manager-stats-grid">{dashboardStats.map((stat) => <StatCard key={stat.id} stat={stat} />)}</div></section>
+      <section aria-labelledby="dashboard-summary-title">
+        <h2 id="dashboard-summary-title" className="visually-hidden">Property summary</h2>
+        <div className="manager-stats-grid">{stats.map((stat) => <StatCard key={stat.id} stat={stat} />)}</div>
+      </section>
 
       <div className="manager-overview-grid">
         <section className="manager-panel">
-          <SectionHeader title="Requires attention" description="Three items to review today" icon="bi-exclamation-diamond" />
-          <div className="manager-alert-list">
-            <button type="button" onClick={() => onNavigate('rent')}><span className="manager-alert-icon manager-alert-icon--danger"><i className="bi bi-wallet2" /></span><span><strong>7 rent payments pending</strong><small>2 accounts are now overdue</small></span><i className="bi bi-chevron-right" /></button>
-            <button type="button" onClick={() => onNavigate('complaints')}><span className="manager-alert-icon manager-alert-icon--warning"><i className="bi bi-tools" /></span><span><strong>3 maintenance requests active</strong><small>One high-priority lift inspection</small></span><i className="bi bi-chevron-right" /></button>
-            <button type="button" onClick={() => onNavigate('flats')}><span className="manager-alert-icon"><i className="bi bi-house-door" /></span><span><strong>9 flats currently vacant</strong><small>Review units ready for new tenants</small></span><i className="bi bi-chevron-right" /></button>
-          </div>
+          <SectionHeader title="Requires attention" description="Items needing review will appear here" icon="bi-exclamation-diamond" />
+          {attentionItems.length ? null : (
+            <div className="manager-inline-empty"><span><i className="bi bi-inbox" aria-hidden="true" /></span><div><strong>Nothing to review yet</strong><p>Attention items will appear when manager data is available.</p></div></div>
+          )}
         </section>
 
         <section className="manager-panel manager-insight">
-          <SectionHeader title="Occupancy insight" description="Across four properties" icon="bi-pie-chart" />
-          <div className="manager-occupancy"><div className="manager-occupancy__ring"><span><strong>81%</strong><small>occupied</small></span></div><div><div><span>Occupied</span><strong>39 flats</strong></div><div><span>Vacant</span><strong>9 flats</strong></div><button type="button" onClick={() => onNavigate('apartments')}>View properties <i className="bi bi-arrow-right" /></button></div></div>
+          <SectionHeader title="Occupancy insight" description="Verified portfolio occupancy" icon="bi-pie-chart" />
+          <div className={`manager-occupancy ${occupancy ? '' : 'manager-occupancy--empty'}`}>
+            <div
+              className="manager-occupancy__ring"
+              style={occupancy?.percentage != null ? { background: `conic-gradient(#6366f1 0 ${occupancy.percentage}%, rgba(255,255,255,.08) ${occupancy.percentage}%)` } : undefined}
+            ><span><strong>{occupancy?.percentage != null ? `${occupancy.percentage}%` : '—'}</strong><small>occupancy</small></span></div>
+            <div>
+              <div><span>Occupied</span><strong>{occupancy?.occupied ?? '—'}</strong></div>
+              <div><span>Vacant</span><strong>{occupancy?.vacant ?? '—'}</strong></div>
+              <p>No occupancy data yet</p>
+            </div>
+          </div>
         </section>
       </div>
 
