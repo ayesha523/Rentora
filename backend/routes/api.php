@@ -1,6 +1,15 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ManagerDashboardController;
+use App\Http\Controllers\ManagerApartmentController;
+use App\Http\Controllers\ManagerFlatController;
+use App\Http\Controllers\ManagerTenantController;
+use App\Http\Controllers\ManagerRentPaymentController;
+use App\Http\Controllers\ManagerUtilityBillController;
+use App\Http\Controllers\ManagerComplaintController;
+use App\Http\Controllers\ManagerMaintenanceRequestController;
+use App\Http\Controllers\ManagerNoticeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,9 +29,6 @@ Route::get('/test', function () {
 |--------------------------------------------------------------------------
 | Authentication Routes
 |--------------------------------------------------------------------------
-|
-| These routes do not require authentication.
-|
 */
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -32,9 +38,6 @@ Route::post('/login', [AuthController::class, 'login']);
 |--------------------------------------------------------------------------
 | Password Recovery Routes
 |--------------------------------------------------------------------------
-|
-| These routes do not require authentication.
-|
 */
 
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
@@ -47,15 +50,135 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])
 |--------------------------------------------------------------------------
 | Protected Routes
 |--------------------------------------------------------------------------
-|
-| These routes require a valid Sanctum token.
-|
 */
 
 Route::middleware('auth:sanctum')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | General Authenticated User Routes
+    |--------------------------------------------------------------------------
+    */
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/user', [AuthController::class, 'user']);
 
+    /*
+    |--------------------------------------------------------------------------
+    | Manager Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('manager')->group(function () {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Manager Dashboard
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/manager/dashboard',
+            [ManagerDashboardController::class, 'index']
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Apartment CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::apiResource(
+            'manager/apartments',
+            ManagerApartmentController::class
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Flat CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::apiResource(
+            'manager/flats',
+            ManagerFlatController::class
+        )->names('flats');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Tenant CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::apiResource(
+            'manager/tenants',
+            ManagerTenantController::class
+        )->names('tenants');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Rent Payment CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::apiResource(
+            'manager/rent-payments',
+            ManagerRentPaymentController::class
+        )->parameters([
+            'rent-payments' => 'rentPayment',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Utility Bill CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::apiResource(
+            'manager/utility-bills',
+            ManagerUtilityBillController::class
+        )->parameters([
+            'utility-bills' => 'utilityBill',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Complaint CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::apiResource(
+            'manager/complaints',
+            ManagerComplaintController::class
+        )->parameters([
+            'complaints' => 'complaint',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Maintenance Request CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::apiResource(
+            'manager/maintenance-requests',
+            ManagerMaintenanceRequestController::class
+        )->parameters([
+            'maintenance-requests' => 'maintenanceRequest',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notice CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::apiResource(
+            'manager/notices',
+            ManagerNoticeController::class
+        )->parameters([
+            'notices' => 'notice',
+        ]);
+    });
 });
