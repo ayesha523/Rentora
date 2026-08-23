@@ -3,15 +3,12 @@ import ManagerSidebar from '../../components/manager/ManagerSidebar';
 import ManagerTopbar from '../../components/manager/ManagerTopbar';
 import OverviewSection from '../../components/manager/sections/OverviewSection';
 import {
-  ApartmentsSection,
   ComplaintsSection,
-  FlatsSection,
-  NoticesSection,
-  RentSection,
   ReportsSection,
   TenantsSection,
   UtilitiesSection,
 } from '../../components/manager/sections/ManagementSections';
+import { ApartmentsSection, FlatsSection, NoticesSection, RentSection } from '../../components/manager/sections/PropertyRecordSections';
 import { managerNavigation, type ManagerSection } from '../../data/managerManagementData';
 import { useAuth } from '../../context/AuthContext';
 import { getAuthenticatedUserIdentity } from '../../utils/authDisplay';
