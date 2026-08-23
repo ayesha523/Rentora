@@ -12,7 +12,8 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  phone?: string;
+  phone?: string | null;
+  avatar?: string | null;
   role: UserRole;
 }
 
@@ -20,6 +21,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
+  loginWithGoogle: () => void;
   register: (
     name: string,
     email: string,
@@ -65,6 +67,7 @@ export function AuthProvider({
     apiRequest<{ success: boolean; user: User }>("/user")
       .then((response) => {
         setUser(response.user);
+
         localStorage.setItem(
           "auth_user",
           JSON.stringify(response.user)
@@ -81,7 +84,7 @@ export function AuthProvider({
   }, []);
 
   /*
-   * Login using Laravel API.
+   * Normal email/password login.
    */
   async function login(
     email: string,
@@ -105,6 +108,7 @@ export function AuthProvider({
     }
 
     localStorage.setItem("auth_token", response.token);
+
     localStorage.setItem(
       "auth_user",
       JSON.stringify(response.user)
@@ -113,6 +117,17 @@ export function AuthProvider({
     setUser(response.user);
 
     return response.user;
+  }
+
+  /*
+   * Start Google OAuth authentication.
+   *
+   * The browser is redirected to Laravel.
+   * Laravel then redirects to Google.
+   */
+  function loginWithGoogle(): void {
+    window.location.href =
+      "http://127.0.0.1:8000/api/auth/google";
   }
 
   /*
@@ -162,6 +177,7 @@ export function AuthProvider({
         user,
         loading,
         login,
+        loginWithGoogle,
         register,
         logout,
       }}

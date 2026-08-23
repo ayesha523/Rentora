@@ -12,6 +12,7 @@ use App\Http\Controllers\ManagerMaintenanceRequestController;
 use App\Http\Controllers\ManagerNoticeController;
 use Illuminate\Support\Facades\Route;
 
+
 /*
 |--------------------------------------------------------------------------
 | Test Route
@@ -24,7 +25,8 @@ Route::get('/test', function () {
         'message' => 'Rentora Backend API Working'
     ]);
 });
-
+Route::get('/auth/google', [AuthController::class, 'redirectToGoogle']);
+Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes

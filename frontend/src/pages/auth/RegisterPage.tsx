@@ -66,21 +66,28 @@ export default function RegisterPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (
-      !form.fullName.trim() ||
-      !form.email.trim() ||
-      !form.phone.trim() ||
-      !form.password ||
-      !form.confirmPassword
-    ) {
-      setError("Please fill in all required fields.");
-      return;
-    }
+    const normalizedEmail = form.email.trim().toLowerCase();
 
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+if (
+  !form.fullName.trim() ||
+  !normalizedEmail ||
+  !form.phone.trim() ||
+  !form.password ||
+  !form.confirmPassword
+) {
+  setError("Please fill in all required fields.");
+  return;
+}
+
+if (!normalizedEmail.endsWith("@gmail.com")) {
+  setError("Please use a valid Gmail address ending with @gmail.com.");
+  return;
+}
+
+if (form.password !== form.confirmPassword) {
+  setError("Passwords do not match.");
+  return;
+}
 
     setError("");
     setLoading(true);
@@ -89,13 +96,13 @@ export default function RegisterPage() {
       await apiRequest<RegisterResponse>("/register", {
         method: "POST",
         body: JSON.stringify({
-          name: form.fullName.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim(),
-          password: form.password,
-          password_confirmation: form.confirmPassword,
-          role: form.role,
-        }),
+  name: form.fullName.trim(),
+  email: normalizedEmail,
+  phone: form.phone.trim(),
+  password: form.password,
+  password_confirmation: form.confirmPassword,
+  role: form.role,
+}),
       });
 
       /*
@@ -106,7 +113,7 @@ export default function RegisterPage() {
         replace: true,
         state: {
           message: "Registration successful. Please sign in.",
-          email: form.email.trim(),
+          email: normalizedEmail,
         },
       });
     } catch (err) {
