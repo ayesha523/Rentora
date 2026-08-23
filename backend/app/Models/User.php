@@ -22,12 +22,14 @@ class User extends Authenticatable implements CanResetPasswordContract
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role_id',
-        'phone',
-    ];
+    'name',
+    'email',
+    'password',
+    'google_id',
+    'avatar',
+    'role_id',
+    'phone',
+];
 
     /**
      * The attributes that should be hidden for serialization.

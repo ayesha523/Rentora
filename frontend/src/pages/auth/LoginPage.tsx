@@ -38,10 +38,17 @@ export default function LoginPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!email.trim() || !password) {
-      setError("Please fill in all required fields.");
-      return;
-    }
+    const normalizedEmail = email.trim().toLowerCase();
+
+if (!normalizedEmail || !password) {
+  setError("Please fill in all required fields.");
+  return;
+}
+
+if (!normalizedEmail.endsWith("@gmail.com")) {
+  setError("Please use a valid Gmail address ending with @gmail.com.");
+  return;
+}
 
     setError("");
     setLoading(true);
@@ -56,7 +63,7 @@ export default function LoginPage() {
        * - stores the authenticated user
        * - updates the authenticated user state
        */
-      const user = await login(email.trim(), password);
+      const user = await login(normalizedEmail, password);
 
       /*
        * IMPORTANT:
@@ -206,7 +213,7 @@ export default function LoginPage() {
                     id="login-email"
                     type="email"
                     autoComplete="email"
-                    placeholder="you@example.com"
+                    placeholder="you@gmail.com"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     disabled={loading}

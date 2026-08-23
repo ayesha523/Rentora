@@ -8,24 +8,36 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
     /**
      * Register a new user.
+     *
+     * Only Gmail / Googlemail addresses are allowed.
      */
     public function register(Request $request)
     {
-        // Validate registration data
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+
+            'email' => [
+    'required',
+    'email',
+    'regex:/^[^@\s]+@gmail\.com$/i',
+    'unique:users,email',
+],
+
             'phone' => 'nullable|string|max:20',
+
             'password' => 'required|string|min:8|confirmed',
+
             'role' => 'required|in:manager,tenant',
+        ], [
+            'email.regex' => 'Please use a valid Gmail address @gmail.com.',
         ]);
 
-        // Return validation errors
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -47,7 +59,7 @@ class AuthController extends Controller
         /*
          * Create the user.
          *
-         * User model contains:
+         * User model uses:
          *
          * 'password' => 'hashed'
          *
@@ -55,7 +67,7 @@ class AuthController extends Controller
          */
         $user = User::create([
             'name' => $request->name,
-            'email' => $request->email,
+            'email' => strtolower($request->email),
             'phone' => $request->phone,
             'password' => $request->password,
             'role_id' => $role->id,
@@ -69,6 +81,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'avatar' => $user->avatar,
                 'role' => $role->name,
             ],
         ], 201);
@@ -76,16 +89,23 @@ class AuthController extends Controller
 
     /**
      * Login an existing user.
+     *
+     * Only Gmail / Googlemail addresses are allowed.
      */
     public function login(Request $request)
     {
-        // Validate login data
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => [
+    'required',
+    'email',
+    'regex:/^[^@\s]+@gmail\.com$/i',
+],
+
             'password' => 'required|string',
+        ], [
+            'email.regex' => 'Please use a valid Gmail address @gmail.com.',
         ]);
 
-        // Return validation errors
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -96,14 +116,22 @@ class AuthController extends Controller
 
         // Find user by email
         $user = User::with('role')
-            ->where('email', $request->email)
+            ->where('email', strtolower($request->email))
             ->first();
 
-        // Check email and password
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        /*
+         * Google-only accounts have a null password.
+         *
+         * They cannot use normal email/password login.
+         */
+        if (
+            !$user ||
+            !$user->password ||
+            !Hash::check($request->password, $user->password)
+        ) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid email or password',
+                'message' => 'Invalid email or password.',
             ], 401);
         }
 
@@ -119,6 +147,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'avatar' => $user->avatar,
                 'role' => $user->role?->name,
             ],
         ], 200);
@@ -127,13 +156,18 @@ class AuthController extends Controller
     /**
      * Request a password reset link.
      *
-     * Always returns the same public response so that
-     * account existence cannot be discovered.
+     * Only Gmail / Googlemail addresses are accepted.
      */
     public function forgotPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => [
+                'required',
+                'email',
+                'regex:/^[^@\s]+@gmail\.com$/i',
+            ],
+        ], [
+            'email.regex' => 'Please use a valid Gmail address @gmail.com.',
         ]);
 
         if ($validator->fails()) {
@@ -144,21 +178,12 @@ class AuthController extends Controller
             ], 422);
         }
 
-        /*
-         * Laravel's password broker:
-         *
-         * - finds the user
-         * - generates a secure token
-         * - stores it in password_reset_tokens
-         * - sends the reset notification
-         */
         Password::broker('users')->sendResetLink([
-            'email' => $request->email,
+            'email' => strtolower($request->email),
         ]);
 
         /*
-         * IMPORTANT:
-         * Never reveal whether the email exists.
+         * Never reveal whether the account exists.
          */
         return response()->json([
             'success' => true,
@@ -172,9 +197,17 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => [
+                'required',
+                'email',
+                'regex:/^[^@\s]+@gmail\.com$/i',
+            ],
+
             'token' => 'required|string',
+
             'password' => 'required|string|min:8|confirmed',
+        ], [
+            'email.regex' => 'Please use a valid Gmail address @gmail.com.',
         ]);
 
         if ($validator->fails()) {
@@ -185,19 +218,9 @@ class AuthController extends Controller
             ], 422);
         }
 
-        /*
-         * Laravel verifies:
-         *
-         * - email
-         * - reset token
-         * - token expiry
-         * - token validity
-         *
-         * On success, Laravel also invalidates the reset token.
-         */
         $status = Password::broker('users')->reset(
             [
-                'email' => $request->email,
+                'email' => strtolower($request->email),
                 'password' => $request->password,
                 'password_confirmation' => $request->password_confirmation,
                 'token' => $request->token,
@@ -209,14 +232,12 @@ class AuthController extends Controller
                  *
                  * 'password' => 'hashed'
                  *
-                 * so assigning the plain password here causes
-                 * Laravel to hash it automatically.
+                 * so Laravel hashes the password automatically.
                  */
                 $user->password = $password;
 
                 /*
-                 * Clear the remember token as an additional
-                 * security measure.
+                 * Clear remember token.
                  */
                 $user->setRememberToken(
                     \Illuminate\Support\Str::random(60)
@@ -225,17 +246,12 @@ class AuthController extends Controller
                 $user->save();
 
                 /*
-                 * Revoke all existing Sanctum authentication tokens.
-                 *
-                 * This logs the user out from existing API sessions.
+                 * Revoke existing Sanctum tokens.
                  */
                 $user->tokens()->delete();
             }
         );
 
-        /*
-         * Password successfully changed.
-         */
         if ($status === Password::PASSWORD_RESET) {
             return response()->json([
                 'success' => true,
@@ -243,9 +259,6 @@ class AuthController extends Controller
             ], 200);
         }
 
-        /*
-         * Invalid or expired reset token.
-         */
         if (
             $status === Password::INVALID_TOKEN ||
             $status === Password::INVALID_USER
@@ -256,9 +269,6 @@ class AuthController extends Controller
             ], 400);
         }
 
-        /*
-         * Fallback for other password broker failures.
-         */
         return response()->json([
             'success' => false,
             'message' => 'Unable to reset the password. Please request a new password reset link.',
@@ -266,11 +276,124 @@ class AuthController extends Controller
     }
 
     /**
+     * Redirect the user to Google authentication.
+     */
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')
+            ->stateless()
+            ->redirect();
+    }
+
+    /**
+     * Handle Google's authentication callback.
+     */
+    public function handleGoogleCallback()
+    {
+        try {
+            $googleUser = Socialite::driver('google')
+                ->stateless()
+                ->user();
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to authenticate with Google.',
+            ], 401);
+        }
+
+        /*
+         * Google must provide an email address.
+         */
+        if (!$googleUser->getEmail()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Google did not provide an email address.',
+            ], 422);
+        }
+
+       $googleEmail = strtolower($googleUser->getEmail());
+
+if (!preg_match('/^[^@\s]+@gmail\.com$/i', $googleEmail)) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Only Gmail accounts (@gmail.com) can use Rentora.',
+    ], 403);
+}
+
+        /*
+         * First try to find the user by Google ID.
+         */
+        $user = User::with('role')
+            ->where('google_id', $googleUser->getId())
+            ->first();
+
+        /*
+         * If Google ID is not linked yet, find the user by email.
+         */
+        if (!$user) {
+            $user = User::where('email', $googleEmail)
+                ->first();
+
+            if ($user) {
+                $user->google_id = $googleUser->getId();
+
+                if (!$user->avatar && $googleUser->getAvatar()) {
+                    $user->avatar = $googleUser->getAvatar();
+                }
+
+                $user->save();
+                $user->load('role');
+            }
+        }
+
+        /*
+         * Create a new Google account if one does not exist.
+         *
+         * New Google accounts are tenants by default.
+         */
+        if (!$user) {
+
+            $role = Role::where('name', 'tenant')->first();
+
+            if (!$role) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Default user role is not configured.',
+                ], 500);
+            }
+
+            $user = User::create([
+                'name' => $googleUser->getName() ?: 'Google User',
+                'email' => $googleEmail,
+                'google_id' => $googleUser->getId(),
+                'avatar' => $googleUser->getAvatar(),
+                'role_id' => $role->id,
+                'password' => null,
+            ]);
+
+            $user->load('role');
+        }
+
+        /*
+         * Create a Sanctum token.
+         */
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        /*
+         * Redirect to React.
+         */
+        return redirect(
+            env('FRONTEND_URL') .
+            '/auth/google/callback?token=' .
+            urlencode($token)
+        );
+    }
+
+    /**
      * Logout the authenticated user.
      */
     public function logout(Request $request)
     {
-        // Delete the token currently being used
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
@@ -293,6 +416,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                'avatar' => $user->avatar,
                 'role' => $user->role?->name,
             ],
         ], 200);
