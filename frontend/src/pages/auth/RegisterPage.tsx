@@ -310,7 +310,7 @@ if (form.password !== form.confirmPassword) {
                     id="register-email"
                     type="email"
                     autoComplete="email"
-                    placeholder="you@example.com"
+                    placeholder="you@gmail.com"
                     value={form.email}
                     onChange={(event) =>
                       updateField(
