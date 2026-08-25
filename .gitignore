@@ -16,3 +16,8 @@ build/
 # Laravel
 /vendor/
 /storage/*.key
+storage/logs/
+
+# Logs
+*.log
+npm-debug.log
