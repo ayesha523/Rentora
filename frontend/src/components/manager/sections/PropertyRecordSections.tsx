@@ -1,59 +1,1773 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
+
+import type {
+  Apartment,
+  ApartmentFormValues,
+  Flat,
+  FlatFormValues,
+  Notice,
+  NoticeFormValues,
+  RecordId,
+  RentPayment,
+} from '../../../types/managerRecords';
+
 import ManagerSectionHeader from '../ManagerSectionHeader';
 import StatusBadge from '../StatusBadge';
-import { DataTable, DeleteConfirmation, EmptyState, FilterSelect, ManagerModal as DetailDrawer, ModuleToolbar, TableActions } from '../ManagerModuleElements';
-import type { Apartment, ApartmentFormValues, CrudCallbacks, Flat, FlatFormValues, MutationState, Notice, NoticeFormValues, RecordId, RentPayment, SystemAlert } from '../../../types/managerRecords';
-import { calculatePaymentStatus, paymentStatusLabel } from '../../../utils/paymentStatus';
 
-const norm = (value: string) => value.toLowerCase().replaceAll('_', ' ');
-const match = (values: (string | null | undefined)[], query: string) => values.some((value) => value?.toLowerCase().includes(query.toLowerCase()));
-const money = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value);
-const dash = (value: ReactNode | null | undefined) => value === null || value === undefined || value === '' ? '—' : value;
-const fullAddress = (item: Apartment) => [item.streetAddress, item.city, item.state, item.postcode, item.country].filter(Boolean).join(', ');
-const defaultApartment: ApartmentFormValues = { name: '', code: '', propertyType: 'apartment_building', streetAddress: '', city: '', state: '', postcode: '', country: '', floors: undefined, contactName: '', contactPhone: '', contactEmail: '', status: 'active', description: '', amenities: '' };
-const defaultFlat: FlatFormValues = { apartmentId: '', unitNumber: '', floor: '', areaSqFt: '', bedrooms: '', bathrooms: '', monthlyRent: '', securityDeposit: '', occupancy: 'vacant', availabilityDate: '', notes: '' };
-const defaultNotice: NoticeFormValues = { title: '', category: 'general', audience: 'all_tenants', targetId: null, priority: 'normal', publishAt: '', expiresAt: '', body: '', status: 'draft' };
+import {
+  DetailDrawer,
+  EmptyState,
+  Feedback,
+  FilterSelect,
+  ModuleToolbar,
+} from '../ManagerModuleElements';
 
-type Errors = Record<string, string>;
-function Field({ label, error, children, wide }: { label: string; error?: string; children: ReactNode; wide?: boolean }) {
-  return <label className={`manager-form-field${wide ? ' manager-form-field--wide' : ''}`}><span>{label}</span>{children}{error && <small role="alert">{error}</small>}</label>;
-}
-function FormShell({ children, error, success, submitting, submitLabel, onSubmit, onCancel }: { children: ReactNode; error?: string | null; success?: string | null; submitting?: boolean; submitLabel: string; onSubmit: (event: FormEvent) => void; onCancel: () => void }) {
-  return <form className="manager-record-form" onSubmit={onSubmit} noValidate><div className="manager-form-scroll"><div className="manager-form-grid">{children}</div>{error && <p className="manager-form-message manager-form-message--error" role="alert">{error}</p>}{success && <p className="manager-form-message" role="status">{success}</p>}</div><div className="manager-form-actions"><button type="button" className="manager-secondary-button" onClick={onCancel}>Cancel</button><button type="submit" className="manager-primary-button" disabled={submitting}>{submitting ? 'Submitting…' : submitLabel}</button></div></form>;
-}
-function unavailable(handler?: unknown) { return handler ? null : 'No API handler is connected. Nothing has been saved.'; }
+/*
+|--------------------------------------------------------------------------
+| TYPES
+|--------------------------------------------------------------------------
+*/
 
-export interface ApartmentsSectionProps extends CrudCallbacks<Apartment, ApartmentFormValues>, MutationState { apartments?: readonly Apartment[]; }
-export function ApartmentsSection({ apartments = [], onCreate, onUpdate, onDelete, onView, submitting, apiError, successMessage }: ApartmentsSectionProps) {
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState('all'); const [editing, setEditing] = useState<Apartment | null>(null); const [formOpen, setFormOpen] = useState(false); const [values, setValues] = useState(defaultApartment); const [errors, setErrors] = useState<Errors>({}); const [localError, setLocalError] = useState(''); const [deleting, setDeleting] = useState<Apartment | null>(null);
-  const records = apartments.filter((a) => match([a.name, a.code, fullAddress(a)], search) && (status === 'all' || a.status === status));
-  const openCreate = () => { setEditing(null); setValues(defaultApartment); setErrors({}); setLocalError(''); setFormOpen(true); };
-  const openEdit = (a: Apartment) => { setEditing(a); setValues({ name: a.name, code: a.code, propertyType: a.propertyType, streetAddress: a.streetAddress, city: a.city, state: a.state, postcode: a.postcode, country: a.country, floors: a.floors, contactName: a.contactName, contactPhone: a.contactPhone, contactEmail: a.contactEmail, status: a.status, description: a.description, amenities: a.amenities }); setErrors({}); setLocalError(''); setFormOpen(true); };
-  const submit = async (event: FormEvent) => { event.preventDefault(); const next: Errors = {}; if (!values.name.trim()) next.name = 'Property name is required.'; if (!values.streetAddress.trim()) next.streetAddress = 'Street address is required.'; if (!values.city.trim()) next.city = 'City is required.'; if (values.contactEmail && !/^\S+@\S+\.\S+$/.test(values.contactEmail)) next.contactEmail = 'Enter a valid email address.'; if (values.floors !== undefined && values.floors !== null && values.floors <= 0) next.floors = 'Floors must be greater than zero.'; setErrors(next); if (Object.keys(next).length) return; const handler = editing ? onUpdate : onCreate; const missing = unavailable(handler); if (missing) { setLocalError(missing); return; } if (editing) await onUpdate?.(editing.id, values); else await onCreate?.(values); };
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Portfolio" title="Apartment Management" description="Manage buildings, capacity, and property contacts." actionLabel="Add Apartment" actionIcon="bi-building-add" onAction={openCreate} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search apartments"><FilterSelect label="Property status" value={status} options={['all', 'active', 'inactive', 'under_maintenance']} onChange={setStatus} /></ModuleToolbar>{records.length ? <DataTable label="Apartments" headers={['Property', 'Full address', 'Type', 'Floors', 'Total', 'Occupied', 'Vacant', 'Status', 'Contact', 'Actions']}>{records.map((a) => <tr key={a.id}><td><strong>{a.name}</strong><small>{dash(a.code)}</small></td><td className="manager-table__wrap">{fullAddress(a)}</td><td>{norm(a.propertyType)}</td><td>{dash(a.floors)}</td><td>{dash(a.totalFlats)}</td><td>{dash(a.occupiedFlats)}</td><td>{dash(a.vacantFlats)}</td><td><StatusBadge value={norm(a.status)} /></td><td><strong>{dash(a.contactName)}</strong><small>{dash(a.contactPhone ?? a.contactEmail)}</small></td><td><TableActions onView={() => onView?.(a)} onEdit={() => openEdit(a)} onDelete={() => setDeleting(a)} /></td></tr>)}</DataTable> : <EmptyState title="No apartments found" description="Apartment records returned by the API will appear here." />}<DetailDrawer open={formOpen} title={editing ? 'Edit apartment' : 'Add apartment'} subtitle="Property details and manager contact" onClose={() => setFormOpen(false)}><FormShell onSubmit={submit} onCancel={() => setFormOpen(false)} submitLabel={editing ? 'Save changes' : 'Add apartment'} submitting={submitting} error={apiError || localError} success={successMessage}><Field label="Property name *" error={errors.name}><input value={values.name} onChange={(e) => setValues({ ...values, name: e.target.value })} /></Field><Field label="Property code"><input value={values.code ?? ''} onChange={(e) => setValues({ ...values, code: e.target.value })} /></Field><Field label="Property type"><select value={values.propertyType} onChange={(e) => setValues({ ...values, propertyType: e.target.value as ApartmentFormValues['propertyType'] })}><option value="apartment_building">Apartment building</option><option value="residential_complex">Residential complex</option><option value="mixed_use">Mixed-use</option><option value="other">Other</option></select></Field><Field label="Status"><select value={values.status} onChange={(e) => setValues({ ...values, status: e.target.value as ApartmentFormValues['status'] })}><option value="active">Active</option><option value="inactive">Inactive</option><option value="under_maintenance">Under maintenance</option></select></Field><Field label="Street address *" error={errors.streetAddress} wide><input value={values.streetAddress} onChange={(e) => setValues({ ...values, streetAddress: e.target.value })} /></Field><Field label="Suburb / city *" error={errors.city}><input value={values.city} onChange={(e) => setValues({ ...values, city: e.target.value })} /></Field><Field label="State / region"><input value={values.state ?? ''} onChange={(e) => setValues({ ...values, state: e.target.value })} /></Field><Field label="Postcode"><input value={values.postcode ?? ''} onChange={(e) => setValues({ ...values, postcode: e.target.value })} /></Field><Field label="Country"><input value={values.country ?? ''} onChange={(e) => setValues({ ...values, country: e.target.value })} /></Field><Field label="Number of floors" error={errors.floors}><input type="number" min="1" value={values.floors ?? ''} onChange={(e) => setValues({ ...values, floors: e.target.value ? Number(e.target.value) : undefined })} /></Field><Field label="Building contact"><input value={values.contactName ?? ''} onChange={(e) => setValues({ ...values, contactName: e.target.value })} /></Field><Field label="Contact phone"><input type="tel" value={values.contactPhone ?? ''} onChange={(e) => setValues({ ...values, contactPhone: e.target.value })} /></Field><Field label="Contact email" error={errors.contactEmail}><input type="email" value={values.contactEmail ?? ''} onChange={(e) => setValues({ ...values, contactEmail: e.target.value })} /></Field><Field label="Amenities"><input value={values.amenities ?? ''} onChange={(e) => setValues({ ...values, amenities: e.target.value })} /></Field><Field label="Description" wide><textarea rows={3} value={values.description ?? ''} onChange={(e) => setValues({ ...values, description: e.target.value })} /></Field></FormShell></DetailDrawer><DeleteConfirmation open={Boolean(deleting)} recordName={deleting?.name ?? ''} submitting={submitting} onCancel={() => setDeleting(null)} onConfirm={() => deleting && onDelete?.(deleting.id)} /></div>;
+type ApartmentsSectionProps = {
+  apartments: Apartment[];
+
+  onCreate: (
+    values: ApartmentFormValues
+  ) => void | Promise<void>;
+
+  onUpdate: (
+    id: RecordId,
+    values: ApartmentFormValues
+  ) => void | Promise<void>;
+
+  onDelete: (
+    id: RecordId
+  ) => void | Promise<void>;
+
+  submitting?: boolean;
+  apiError?: string | null;
+  successMessage?: string | null;
+};
+
+type FlatsSectionProps = {
+  flats: Flat[];
+  apartments: Apartment[];
+
+  onCreate: (
+    values: FlatFormValues
+  ) => void | Promise<void>;
+
+  onUpdate: (
+    id: RecordId,
+    values: FlatFormValues
+  ) => void | Promise<void>;
+
+  onDelete: (
+    id: RecordId
+  ) => void | Promise<void>;
+
+  submitting?: boolean;
+  apiError?: string | null;
+  successMessage?: string | null;
+};
+
+type RentSectionProps = {
+  payments: RentPayment[];
+};
+
+type NoticesSectionProps = {
+  notices: Notice[];
+
+  onCreate: (
+    values: NoticeFormValues
+  ) => void | Promise<void>;
+
+  onUpdate: (
+    id: RecordId,
+    values: NoticeFormValues
+  ) => void | Promise<void>;
+
+  onDelete: (
+    id: RecordId
+  ) => void | Promise<void>;
+
+  submitting?: boolean;
+  apiError?: string | null;
+  successMessage?: string | null;
+};
+
+type FormErrors = Record<string, string>;
+
+/*
+|--------------------------------------------------------------------------
+| HELPERS
+|--------------------------------------------------------------------------
+*/
+
+const matches = (
+  values: readonly (string | number | null | undefined)[],
+  search: string
+) => {
+  const query = search.trim().toLowerCase();
+
+  if (!query) {
+    return true;
+  }
+
+  return values.some((value) =>
+    String(value ?? '')
+      .toLowerCase()
+      .includes(query)
+  );
+};
+
+const money = (value: number) =>
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(value);
+
+const displayValue = (
+  value: ReactNode | null | undefined
+) =>
+  value === null ||
+  value === undefined ||
+  value === ''
+    ? '—'
+    : value;
+
+const normalise = (value: string) =>
+  value.replace(/_/g, ' ');
+
+/*
+|--------------------------------------------------------------------------
+| DEFAULT FORMS
+|--------------------------------------------------------------------------
+*/
+
+const defaultApartment: ApartmentFormValues = {
+  name: '',
+  address: '',
+};
+
+const defaultFlat: FlatFormValues = {
+  apartment_id: '',
+  flat_number: '',
+  floor: '',
+  rent_amount: '',
+  status: 'vacant',
+};
+
+const defaultNotice: NoticeFormValues = {
+  title: '',
+  content: '',
+};
+
+/*
+|--------------------------------------------------------------------------
+| FORM COMPONENTS
+|--------------------------------------------------------------------------
+*/
+
+function Field({
+  label,
+  error,
+  children,
+  wide = false,
+}: {
+  label: string;
+  error?: string;
+  children: ReactNode;
+  wide?: boolean;
+}) {
+  return (
+    <label
+      className={`manager-form-field${
+        wide
+          ? ' manager-form-field--wide'
+          : ''
+      }`}
+    >
+      <span>{label}</span>
+
+      {children}
+
+      {error && (
+        <small role="alert">
+          {error}
+        </small>
+      )}
+    </label>
+  );
 }
 
-export interface FlatsSectionProps extends CrudCallbacks<Flat, FlatFormValues>, MutationState { flats?: readonly Flat[]; apartments?: readonly Apartment[]; }
-export function FlatsSection({ flats = [], apartments = [], onCreate, onUpdate, onDelete, onView, submitting, apiError, successMessage }: FlatsSectionProps) {
-  const [search, setSearch] = useState(''); const [occupancy, setOccupancy] = useState('all'); const [property, setProperty] = useState('all'); const [open, setOpen] = useState(false); const [editing, setEditing] = useState<Flat | null>(null); const [values, setValues] = useState(defaultFlat); const [errors, setErrors] = useState<Errors>({}); const [localError, setLocalError] = useState(''); const [deleting, setDeleting] = useState<Flat | null>(null);
-  const records = flats.filter((f) => match([f.unitNumber, f.apartmentName, f.apartmentAddress], search) && (occupancy === 'all' || f.occupancy === occupancy) && (property === 'all' || String(f.apartmentId) === property));
-  const edit = (f: Flat) => { setEditing(f); setValues({ apartmentId: f.apartmentId, unitNumber: f.unitNumber, floor: f.floor, areaSqFt: f.areaSqFt, bedrooms: f.bedrooms ?? '', bathrooms: f.bathrooms ?? '', monthlyRent: f.monthlyRent ?? '', securityDeposit: f.securityDeposit ?? '', occupancy: f.occupancy, availabilityDate: f.availabilityDate ?? '', notes: f.notes ?? '' }); setErrors({}); setLocalError(''); setOpen(true); };
-  const submit = async (event: FormEvent) => { event.preventDefault(); const next: Errors = {}; if (values.apartmentId === '') next.apartmentId = 'Choose an apartment.'; if (!values.unitNumber.trim()) next.unitNumber = 'Unit number is required.'; if (values.floor === '') next.floor = 'Floor is required.'; if (values.areaSqFt === '' || values.areaSqFt <= 0) next.areaSqFt = 'Area must be greater than zero.'; for (const key of ['monthlyRent', 'securityDeposit'] as const) if (values[key] !== '' && values[key] < 0) next[key] = 'Value cannot be negative.'; setErrors(next); if (Object.keys(next).length) return; const handler = editing ? onUpdate : onCreate; const missing = unavailable(handler); if (missing) { setLocalError(missing); return; } if (editing) await onUpdate?.(editing.id, values); else await onCreate?.(values); };
-  const numberField = (label: string, key: 'floor' | 'areaSqFt' | 'bedrooms' | 'bathrooms' | 'monthlyRent' | 'securityDeposit', min = 0) => <Field label={label} error={errors[key]}><input type="number" min={min} step={key === 'bathrooms' ? .5 : 1} value={values[key]} onChange={(e) => setValues({ ...values, [key]: e.target.value === '' ? '' : Number(e.target.value) })} /></Field>;
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Inventory" title="Flat Management" description="Track unit availability, residents, rent, and lease status." actionLabel="Add Flat" actionIcon="bi-plus-square" onAction={() => { setEditing(null); setValues(defaultFlat); setErrors({}); setLocalError(''); setOpen(true); }} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search flats"><FilterSelect label="Occupancy" value={occupancy} options={['all', 'vacant', 'occupied', 'reserved', 'maintenance']} onChange={setOccupancy} /><label className="manager-control"><span>Apartment</span><select value={property} onChange={(e) => setProperty(e.target.value)}><option value="all">All apartments</option>{apartments.map((a) => <option key={a.id} value={String(a.id)}>{a.name}</option>)}</select></label></ModuleToolbar>{records.length ? <DataTable label="Flats" headers={['Flat / unit', 'Apartment', 'Address', 'Floor', 'Area (sq ft)', 'Beds / baths', 'Monthly rent', 'Tenant', 'Occupancy', 'Lease', 'Actions']}>{records.map((f) => <tr key={f.id}><td className="manager-table__primary">{f.unitNumber}</td><td>{f.apartmentName}</td><td className="manager-table__wrap">{f.apartmentAddress}</td><td>{f.floor}</td><td>{f.areaSqFt.toLocaleString()}</td><td>{dash(f.bedrooms)} / {dash(f.bathrooms)}</td><td>{f.monthlyRent == null ? '—' : money(f.monthlyRent)}</td><td>{dash(f.tenantName)}</td><td><StatusBadge value={norm(f.occupancy)} /></td><td><strong>{dash(f.leaseStatus)}</strong><small>{dash(f.leasePeriod)}</small></td><td><TableActions onView={() => onView?.(f)} onEdit={() => edit(f)} onDelete={() => setDeleting(f)} /></td></tr>)}</DataTable> : <EmptyState title="No flats found" description="Flat records returned by the API will appear here." />}<DetailDrawer open={open} title={editing ? 'Edit flat' : 'Add flat'} subtitle="Unit and pricing details" onClose={() => setOpen(false)}><FormShell onSubmit={submit} onCancel={() => setOpen(false)} submitLabel={editing ? 'Save changes' : 'Add flat'} submitting={submitting} error={apiError || localError} success={successMessage}><Field label="Parent apartment *" error={errors.apartmentId} wide><select value={String(values.apartmentId)} onChange={(e) => setValues({ ...values, apartmentId: e.target.value })}><option value="">Select an apartment</option>{apartments.map((a) => <option key={a.id} value={String(a.id)}>{a.name} — {fullAddress(a)}</option>)}</select></Field><Field label="Flat / unit *" error={errors.unitNumber}><input value={values.unitNumber} onChange={(e) => setValues({ ...values, unitNumber: e.target.value })} /></Field>{numberField('Floor number *', 'floor')}{numberField('Area in square feet *', 'areaSqFt', 1)}{numberField('Bedrooms', 'bedrooms')}{numberField('Bathrooms', 'bathrooms')}{numberField('Monthly rent', 'monthlyRent')}{numberField('Security deposit', 'securityDeposit')}<Field label="Occupancy"><select value={values.occupancy} onChange={(e) => setValues({ ...values, occupancy: e.target.value as FlatFormValues['occupancy'] })}><option value="vacant">Vacant</option><option value="occupied">Occupied</option><option value="reserved">Reserved</option><option value="maintenance">Maintenance</option></select></Field><Field label="Availability date"><input type="date" value={values.availabilityDate} onChange={(e) => setValues({ ...values, availabilityDate: e.target.value })} /></Field><Field label="Notes" wide><textarea rows={4} value={values.notes} onChange={(e) => setValues({ ...values, notes: e.target.value })} /></Field></FormShell></DetailDrawer><DeleteConfirmation open={Boolean(deleting)} recordName={deleting?.unitNumber ?? ''} submitting={submitting} onCancel={() => setDeleting(null)} onConfirm={() => deleting && onDelete?.(deleting.id)} /></div>;
+function FormShell({
+  children,
+  error,
+  success,
+  submitting,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: {
+  children: ReactNode;
+  error?: string | null;
+  success?: string | null;
+  submitting?: boolean;
+  submitLabel: string;
+  onSubmit: (
+    event: FormEvent<HTMLFormElement>
+  ) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  return (
+    <form
+      className="manager-record-form"
+      onSubmit={onSubmit}
+      noValidate
+    >
+      <div className="manager-form-scroll">
+        <div className="manager-form-grid">
+          {children}
+        </div>
+
+        {error && (
+          <p
+            className="manager-form-message manager-form-message--error"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        {success && (
+          <p
+            className="manager-form-message"
+            role="status"
+          >
+            {success}
+          </p>
+        )}
+      </div>
+
+      <div className="manager-form-actions">
+        <button
+          type="button"
+          className="manager-secondary-button"
+          onClick={onCancel}
+          disabled={submitting}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          className="manager-primary-button"
+          disabled={submitting}
+        >
+          {submitting
+            ? 'Saving...'
+            : submitLabel}
+        </button>
+      </div>
+    </form>
+  );
 }
 
-export function RentSection({ payments = [], onView }: { payments?: readonly RentPayment[]; onView?: (payment: RentPayment) => void }) {
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState('all');
-  const rows = payments.map((payment) => ({ payment, computed: calculatePaymentStatus(payment.amountDue, payment.amountPaid, payment.dueDate) })).filter(({ payment, computed }) => match([payment.tenantName, payment.apartmentName, payment.flatNumber, payment.billingPeriod], search) && (status === 'all' || computed === status));
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Finance" title="Rent Collection" description="Review billing records and payment activity. Statuses are calculated, never manually assigned." /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search payments"><FilterSelect label="Payment status" value={status} options={['all', 'paid', 'pending', 'overdue', 'partially_paid', 'partially_paid_overdue']} onChange={setStatus} /></ModuleToolbar>{rows.length ? <DataTable label="Rent payments" headers={['Tenant', 'Apartment', 'Flat', 'Billing period', 'Rent amount', 'Due date', 'Amount paid', 'Balance', 'Paid date', 'Method', 'Status', 'Actions']}>{rows.map(({ payment: p, computed }) => <tr key={p.id}><td className="manager-table__primary">{p.tenantName}</td><td>{p.apartmentName}</td><td>{p.flatNumber}</td><td>{p.billingPeriod}</td><td>{money(p.amountDue)}</td><td>{p.dueDate}</td><td>{money(p.amountPaid)}</td><td>{money(Math.max(0, p.amountDue - p.amountPaid))}</td><td>{dash(p.paidDate)}</td><td>{dash(p.paymentMethod)}</td><td><StatusBadge value={paymentStatusLabel[computed]} /></td><td><TableActions onView={onView ? () => onView(p) : undefined} /></td></tr>)}</DataTable> : <EmptyState title="No rent payments found" description="Billing records returned by the API will appear here." />}</div>;
+/*
+|--------------------------------------------------------------------------
+| APARTMENTS
+|--------------------------------------------------------------------------
+*/
+
+export function ApartmentsSection({
+  apartments,
+  onCreate,
+  onUpdate,
+  onDelete,
+  submitting = false,
+  apiError,
+  successMessage,
+}: ApartmentsSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [status, setStatus] =
+    useState('All statuses');
+
+  const [selected, setSelected] =
+    useState<Apartment | null>(null);
+
+  const [editing, setEditing] =
+    useState<Apartment | null>(null);
+
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const [values, setValues] =
+    useState<ApartmentFormValues>({
+      ...defaultApartment,
+    });
+
+  const [errors, setErrors] =
+    useState<FormErrors>({});
+
+  const records = useMemo(
+    () =>
+      apartments.filter((item) => {
+        const searchMatches = matches(
+          [
+            item.name,
+            item.address,
+          ],
+          search
+        );
+
+        /*
+         * Current Apartment type does not contain
+         * a status field.
+         *
+         * Therefore the status filter is kept disabled
+         * until status exists in managerRecords.ts.
+         */
+        const statusMatches =
+          status === 'All statuses';
+
+        return (
+          searchMatches &&
+          statusMatches
+        );
+      }),
+    [
+      apartments,
+      search,
+      status,
+    ]
+  );
+
+  const openCreate = () => {
+    setEditing(null);
+
+    setValues({
+      ...defaultApartment,
+    });
+
+    setErrors({});
+    setFormOpen(true);
+  };
+
+  const openEdit = (
+    apartment: Apartment
+  ) => {
+    setEditing(apartment);
+
+    setValues({
+      name: apartment.name ?? '',
+      address: apartment.address ?? '',
+    });
+
+    setErrors({});
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    if (submitting) {
+      return;
+    }
+
+    setFormOpen(false);
+    setEditing(null);
+    setErrors({});
+  };
+
+  const submitApartment = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    const nextErrors: FormErrors = {};
+
+    if (!values.name.trim()) {
+      nextErrors.name =
+        'Apartment name is required.';
+    }
+
+    if (!values.address.trim()) {
+      nextErrors.address =
+        'Apartment address is required.';
+    }
+
+    setErrors(nextErrors);
+
+    if (
+      Object.keys(nextErrors).length
+    ) {
+      return;
+    }
+
+    try {
+      if (editing) {
+        await onUpdate(
+          editing.id,
+          values
+        );
+      } else {
+        await onCreate(values);
+      }
+
+      closeForm();
+    } catch {
+      // Parent handles API error.
+    }
+  };
+
+  const deleteApartment = async (
+    apartment: Apartment
+  ) => {
+    const confirmed =
+      window.confirm(
+        `Delete "${apartment.name}"? This cannot be undone.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await onDelete(apartment.id);
+
+      if (
+        selected &&
+        String(selected.id) ===
+          String(apartment.id)
+      ) {
+        setSelected(null);
+      }
+    } catch {
+      // Parent displays API error.
+    }
+  };
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Portfolio"
+        title="Apartment Management"
+        description="Manage your apartments and their addresses."
+        actionLabel="Add Apartment"
+        actionIcon="bi-building-add"
+        onAction={openCreate}
+      />
+
+      <Feedback
+        message={
+          successMessage ??
+          apiError ??
+          ''
+        }
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search apartments"
+      >
+        <FilterSelect
+          label="Status"
+          value={status}
+          options={[
+            'All statuses',
+          ]}
+          onChange={setStatus}
+        />
+      </ModuleToolbar>
+
+      {records.length ? (
+        <div className="manager-property-grid">
+          {records.map((item) => (
+            <article
+              className="manager-property-card"
+              key={item.id}
+            >
+              <div className="manager-property-card__visual">
+                <i className="bi bi-building" />
+              </div>
+
+              <div className="manager-property-card__body">
+                <span>
+                  {displayValue(
+                    item.address
+                  )}
+                </span>
+
+                <h2>
+                  {item.name}
+                </h2>
+
+                <div className="manager-property-metrics">
+                  <div>
+                    <strong>
+                      {item.total_flats ??
+                        item.flats?.length ??
+                        0}
+                    </strong>
+
+                    <small>
+                      Total flats
+                    </small>
+                  </div>
+
+                  <div>
+                    <strong>
+                      {item.occupied_flats ??
+                        0}
+                    </strong>
+
+                    <small>
+                      Occupied
+                    </small>
+                  </div>
+
+                  <div>
+                    <strong>
+                      {item.vacant_flats ??
+                        0}
+                    </strong>
+
+                    <small>
+                      Vacant
+                    </small>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelected(item)
+                    }
+                  >
+                    View{' '}
+                    <i className="bi bi-eye" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openEdit(item)
+                    }
+                  >
+                    Edit{' '}
+                    <i className="bi bi-pencil" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      deleteApartment(item)
+                    }
+                    disabled={submitting}
+                  >
+                    Delete{' '}
+                    <i className="bi bi-trash" />
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="No apartments found"
+          description="No apartments returned from Laravel."
+        />
+      )}
+
+      <DetailDrawer
+        open={Boolean(selected)}
+        title={
+          selected?.name ?? ''
+        }
+        subtitle={
+          selected
+            ? selected.address
+            : ''
+        }
+        onClose={() =>
+          setSelected(null)
+        }
+      >
+        {selected && (
+          <div className="manager-detail-grid">
+            <div>
+              <span>
+                Total flats
+              </span>
+
+              <strong>
+                {selected.total_flats ??
+                  selected.flats?.length ??
+                  0}
+              </strong>
+            </div>
+
+            <div>
+              <span>
+                Occupied
+              </span>
+
+              <strong>
+                {selected.occupied_flats ??
+                  0}
+              </strong>
+            </div>
+
+            <div>
+              <span>
+                Vacant
+              </span>
+
+              <strong>
+                {selected.vacant_flats ??
+                  0}
+              </strong>
+            </div>
+
+            <div className="manager-detail-grid__wide">
+              <span>
+                Address
+              </span>
+
+              <strong>
+                {displayValue(
+                  selected.address
+                )}
+              </strong>
+            </div>
+          </div>
+        )}
+      </DetailDrawer>
+
+      <DetailDrawer
+        open={formOpen}
+        title={
+          editing
+            ? 'Edit apartment'
+            : 'Add apartment'
+        }
+        subtitle="Apartment details"
+        onClose={closeForm}
+      >
+        <FormShell
+          onSubmit={submitApartment}
+          onCancel={closeForm}
+          submitLabel={
+            editing
+              ? 'Save changes'
+              : 'Add apartment'
+          }
+          submitting={submitting}
+          error={apiError}
+          success={successMessage}
+        >
+          <Field
+            label="Apartment name *"
+            error={errors.name}
+          >
+            <input
+              type="text"
+              value={values.name}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  name: event.target.value,
+                })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Address *"
+            error={errors.address}
+            wide
+          >
+            <textarea
+              rows={4}
+              value={values.address}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  address:
+                    event.target.value,
+                })
+              }
+            />
+          </Field>
+        </FormShell>
+      </DetailDrawer>
+    </div>
+  );
 }
 
-export interface NoticesSectionProps extends CrudCallbacks<Notice, NoticeFormValues>, MutationState { notices?: readonly Notice[]; systemAlerts?: readonly SystemAlert[]; onPublish?: (id: RecordId, publish: boolean) => void | Promise<void>; }
-export function NoticesSection({ notices = [], systemAlerts = [], onCreate, onUpdate, onDelete, onView, onPublish, submitting, apiError, successMessage }: NoticesSectionProps) {
-  const [search, setSearch] = useState(''); const [category, setCategory] = useState('all'); const [open, setOpen] = useState(false); const [editing, setEditing] = useState<Notice | null>(null); const [values, setValues] = useState(defaultNotice); const [errors, setErrors] = useState<Errors>({}); const [localError, setLocalError] = useState(''); const [deleting, setDeleting] = useState<Notice | null>(null);
-  const records = notices.filter((n) => match([n.title, n.body, n.audienceLabel], search) && (category === 'all' || n.category === category));
-  const submit = async (event: FormEvent) => { event.preventDefault(); const next: Errors = {}; if (!values.title.trim()) next.title = 'Notice title is required.'; if (!values.body.trim()) next.body = 'Message is required.'; if (values.audience !== 'all_tenants' && !values.targetId) next.targetId = 'Choose the intended recipient.'; if (values.publishAt && values.expiresAt && values.expiresAt <= values.publishAt) next.expiresAt = 'Expiry must be after the publish date.'; setErrors(next); if (Object.keys(next).length) return; const handler = editing ? onUpdate : onCreate; const missing = unavailable(handler); if (missing) { setLocalError(missing); return; } if (editing) await onUpdate?.(editing.id, values); else await onCreate?.(values); };
-  const edit = (n: Notice) => { setEditing(n); setValues({ title: n.title, category: n.category, audience: n.audience, targetId: n.targetId, priority: n.priority, publishAt: n.publishAt, expiresAt: n.expiresAt, body: n.body, status: n.status }); setErrors({}); setLocalError(''); setOpen(true); };
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Communications" title="Notice Management" description="Publish resident communications separately from automatic system alerts." actionLabel="Publish Notice" actionIcon="bi-megaphone" onAction={() => { setEditing(null); setValues(defaultNotice); setErrors({}); setLocalError(''); setOpen(true); }} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search notices"><FilterSelect label="Category" value={category} options={['all', 'general', 'payment_reminder', 'maintenance', 'emergency', 'community']} onChange={setCategory} /></ModuleToolbar>{records.length ? <DataTable label="Manual notices" headers={['Title', 'Category', 'Audience', 'Priority', 'Published', 'Expiry', 'Status', 'Actions']}>{records.map((n) => <tr key={n.id}><td className="manager-table__primary manager-table__wrap">{n.title}</td><td>{norm(n.category)}</td><td>{n.audienceLabel ?? norm(n.audience)}</td><td><StatusBadge value={norm(n.priority)} /></td><td>{dash(n.publishAt)}</td><td>{dash(n.expiresAt)}</td><td><StatusBadge value={norm(n.status)} /></td><td><div className="manager-table-actions"><button type="button" onClick={() => onView?.(n)}>View</button><button type="button" onClick={() => edit(n)}>Edit</button><button type="button" onClick={() => onPublish?.(n.id, n.status !== 'published')}>{n.status === 'published' ? 'Unpublish' : 'Publish'}</button><button type="button" className="danger" onClick={() => setDeleting(n)}>Delete</button></div></td></tr>)}</DataTable> : <EmptyState title="No notices found" description="Manual notices returned by the API will appear here." />}<section className="manager-system-alerts" aria-labelledby="system-alerts-title"><div><span>Automatic monitoring</span><h2 id="system-alerts-title">System alerts</h2><p>Read-only alerts generated from rent, lease, and maintenance data.</p></div>{systemAlerts.length ? <DataTable label="System alerts" headers={['Alert', 'Tenant', 'Apartment / flat', 'Due date', 'Status']}>{systemAlerts.map((a) => <tr key={a.id}><td className="manager-table__primary">{norm(a.type)}</td><td>{dash(a.tenantName)}</td><td><strong>{a.apartmentName}</strong><small>{dash(a.flatNumber)}</small></td><td>{dash(a.dueDate)}</td><td><StatusBadge value={a.status} /></td></tr>)}</DataTable> : <EmptyState title="No system alerts" description="Backend-generated alerts will appear here and cannot be edited manually." />}</section><DetailDrawer open={open} title={editing ? 'Edit notice' : 'Publish notice'} subtitle="Resident communication" onClose={() => setOpen(false)}><FormShell onSubmit={submit} onCancel={() => setOpen(false)} submitLabel={editing ? 'Save changes' : values.status === 'draft' ? 'Save draft' : 'Publish notice'} submitting={submitting} error={apiError || localError} success={successMessage}><Field label="Notice title *" error={errors.title} wide><input value={values.title} onChange={(e) => setValues({ ...values, title: e.target.value })} /></Field><Field label="Category"><select value={values.category} onChange={(e) => setValues({ ...values, category: e.target.value as NoticeFormValues['category'] })}><option value="general">General</option><option value="payment_reminder">Payment reminder</option><option value="maintenance">Maintenance</option><option value="emergency">Emergency</option><option value="community">Community</option></select></Field><Field label="Target audience"><select value={values.audience} onChange={(e) => setValues({ ...values, audience: e.target.value as NoticeFormValues['audience'], targetId: null })}><option value="all_tenants">All tenants</option><option value="selected_apartment">Selected apartment</option><option value="selected_flat">Selected flat</option><option value="selected_tenant">Selected tenant</option></select></Field>{values.audience !== 'all_tenants' && <Field label="Target record ID *" error={errors.targetId}><input value={values.targetId ?? ''} onChange={(e) => setValues({ ...values, targetId: e.target.value })} /></Field>}<Field label="Priority"><select value={values.priority} onChange={(e) => setValues({ ...values, priority: e.target.value as NoticeFormValues['priority'] })}><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select></Field><Field label="Publish date / time"><input type="datetime-local" value={values.publishAt ?? ''} onChange={(e) => setValues({ ...values, publishAt: e.target.value })} /></Field><Field label="Expiry date / time" error={errors.expiresAt}><input type="datetime-local" value={values.expiresAt ?? ''} onChange={(e) => setValues({ ...values, expiresAt: e.target.value })} /></Field><Field label="Status"><select value={values.status} onChange={(e) => setValues({ ...values, status: e.target.value as NoticeFormValues['status'] })}><option value="draft">Draft</option><option value="published">Published</option></select></Field><Field label="Message *" error={errors.body} wide><textarea rows={8} value={values.body} onChange={(e) => setValues({ ...values, body: e.target.value })} /></Field></FormShell></DetailDrawer><DeleteConfirmation open={Boolean(deleting)} recordName={deleting?.title ?? ''} submitting={submitting} onCancel={() => setDeleting(null)} onConfirm={() => deleting && onDelete?.(deleting.id)} /></div>;
+/*
+|--------------------------------------------------------------------------
+| FLATS
+|--------------------------------------------------------------------------
+*/
+
+export function FlatsSection({
+  flats,
+  apartments,
+  onCreate,
+  onUpdate,
+  onDelete,
+  submitting = false,
+  apiError,
+  successMessage,
+}: FlatsSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [status, setStatus] =
+    useState('All statuses');
+
+  const [property, setProperty] =
+    useState('All apartments');
+
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const [editing, setEditing] =
+    useState<Flat | null>(null);
+
+  const [values, setValues] =
+    useState<FlatFormValues>({
+      ...defaultFlat,
+    });
+
+  const [errors, setErrors] =
+    useState<FormErrors>({});
+
+  const properties = [
+    'All apartments',
+    ...Array.from(
+      new Set(
+        apartments.map(
+          (item) => item.name
+        )
+      )
+    ),
+  ];
+
+  const records = useMemo(
+    () =>
+      flats.filter((item) => {
+        const apartmentName =
+          item.apartment?.name ??
+          apartments.find(
+            (apartment) =>
+              String(
+                apartment.id
+              ) ===
+              String(
+                item.apartment_id
+              )
+          )?.name ??
+          '';
+
+        const tenantName =
+          item.tenant?.user?.name ??
+          '';
+
+        const matchesSearch =
+          matches(
+            [
+              item.flat_number,
+              item.floor,
+              item.rent_amount,
+              item.status,
+              apartmentName,
+              tenantName,
+            ],
+            search
+          );
+
+        const matchesStatus =
+          status === 'All statuses' ||
+          item.status === status;
+
+        const matchesProperty =
+          property ===
+            'All apartments' ||
+          apartmentName === property;
+
+        return (
+          matchesSearch &&
+          matchesStatus &&
+          matchesProperty
+        );
+      }),
+    [
+      flats,
+      apartments,
+      search,
+      status,
+      property,
+    ]
+  );
+
+  const openCreate = () => {
+    setEditing(null);
+
+    setValues({
+      ...defaultFlat,
+    });
+
+    setErrors({});
+    setFormOpen(true);
+  };
+
+  const openEdit = (
+    flat: Flat
+  ) => {
+    setEditing(flat);
+
+    setValues({
+      apartment_id:
+        flat.apartment_id ??
+        '',
+
+      flat_number:
+        flat.flat_number ??
+        '',
+
+      floor:
+        flat.floor ?? '',
+
+      rent_amount:
+        flat.rent_amount ?? '',
+
+      status:
+        flat.status ??
+        'vacant',
+    });
+
+    setErrors({});
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    if (submitting) {
+      return;
+    }
+
+    setFormOpen(false);
+    setEditing(null);
+    setErrors({});
+  };
+
+  const submitFlat = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    const nextErrors: FormErrors = {};
+
+    if (
+      values.apartment_id === ''
+    ) {
+      nextErrors.apartment_id =
+        'Choose an apartment.';
+    }
+
+    if (
+      !String(
+        values.flat_number
+      ).trim()
+    ) {
+      nextErrors.flat_number =
+        'Flat/unit number is required.';
+    }
+
+    if (
+      values.floor === '' ||
+      Number(values.floor) < 0
+    ) {
+      nextErrors.floor =
+        'Floor number is required.';
+    }
+
+    if (
+      values.rent_amount === '' ||
+      Number(values.rent_amount) < 0
+    ) {
+      nextErrors.rent_amount =
+        'Rent amount cannot be negative.';
+    }
+
+    setErrors(nextErrors);
+
+    if (
+      Object.keys(nextErrors).length
+    ) {
+      return;
+    }
+
+    try {
+      if (editing) {
+        await onUpdate(
+          editing.id,
+          values
+        );
+      } else {
+        await onCreate(values);
+      }
+
+      closeForm();
+    } catch {
+      // Parent handles API error.
+    }
+  };
+
+  const deleteFlat = async (
+    flat: Flat
+  ) => {
+    const confirmed =
+      window.confirm(
+        `Delete flat "${flat.flat_number}"? This cannot be undone.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await onDelete(flat.id);
+    } catch {
+      // Parent handles API error.
+    }
+  };
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Inventory"
+        title="Flat Management"
+        description="Track apartment units, rent amounts, and occupancy status."
+        actionLabel="Add Flat"
+        actionIcon="bi-plus-square"
+        onAction={openCreate}
+      />
+
+      <Feedback
+        message={
+          successMessage ??
+          apiError ??
+          ''
+        }
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search flats"
+      >
+        <FilterSelect
+          label="Flat status"
+          value={status}
+          options={[
+            'All statuses',
+            'vacant',
+            'occupied',
+          ]}
+          onChange={setStatus}
+        />
+
+        <FilterSelect
+          label="Apartment"
+          value={property}
+          options={properties}
+          onChange={setProperty}
+        />
+      </ModuleToolbar>
+
+      {records.length ? (
+        <DataTable
+          headers={[
+            'Flat',
+            'Apartment',
+            'Floor',
+            'Tenant',
+            'Monthly rent',
+            'Status',
+            'Actions',
+          ]}
+        >
+          {records.map((item) => {
+            const apartmentName =
+              item.apartment?.name ??
+              apartments.find(
+                (apartment) =>
+                  String(
+                    apartment.id
+                  ) ===
+                  String(
+                    item.apartment_id
+                  )
+              )?.name ??
+              '—';
+
+            const tenantName =
+              item.tenant?.user?.name ??
+              'Vacant';
+
+            return (
+              <tr
+                key={item.id}
+              >
+                <td className="manager-table__primary">
+                  {item.flat_number}
+                </td>
+
+                <td>
+                  {apartmentName}
+                </td>
+
+                <td>
+                  {item.floor}
+                </td>
+
+                <td>
+                  {tenantName}
+                </td>
+
+                <td>
+                  {money(
+                    Number(
+                      item.rent_amount
+                    )
+                  )}
+                </td>
+
+                <td>
+                  <StatusBadge
+                    value={normalise(
+                      item.status
+                    )}
+                  />
+                </td>
+
+                <td>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '6px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openEdit(
+                          item
+                        )
+                      }
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        deleteFlat(
+                          item
+                        )
+                      }
+                      disabled={
+                        submitting
+                      }
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </DataTable>
+      ) : (
+        <EmptyState
+          title="No flats found"
+          description="No flats returned from Laravel."
+        />
+      )}
+
+      <DetailDrawer
+        open={formOpen}
+        title={
+          editing
+            ? 'Edit flat'
+            : 'Add flat'
+        }
+        subtitle="Unit and rent details"
+        onClose={closeForm}
+      >
+        <FormShell
+          onSubmit={submitFlat}
+          onCancel={closeForm}
+          submitLabel={
+            editing
+              ? 'Save changes'
+              : 'Add flat'
+          }
+          submitting={submitting}
+          error={apiError}
+          success={successMessage}
+        >
+          <Field
+            label="Parent apartment *"
+            error={
+              errors.apartment_id
+            }
+            wide
+          >
+            <select
+              value={String(
+                values.apartment_id
+              )}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  apartment_id:
+                    event.target.value,
+                })
+              }
+            >
+              <option value="">
+                Select an apartment
+              </option>
+
+              {apartments.map(
+                (apartment) => (
+                  <option
+                    key={
+                      apartment.id
+                    }
+                    value={String(
+                      apartment.id
+                    )}
+                  >
+                    {apartment.name}
+                  </option>
+                )
+              )}
+            </select>
+          </Field>
+
+          <Field
+            label="Flat / unit *"
+            error={
+              errors.flat_number
+            }
+          >
+            <input
+              type="text"
+              value={
+                values.flat_number
+              }
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  flat_number:
+                    event.target.value,
+                })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Floor number *"
+            error={errors.floor}
+          >
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={
+                values.floor
+              }
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  floor:
+                    event.target.value ===
+                    ''
+                      ? ''
+                      : Number(
+                          event.target.value
+                        ),
+                })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Monthly rent *"
+            error={
+              errors.rent_amount
+            }
+          >
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={
+                values.rent_amount
+              }
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  rent_amount:
+                    event.target.value ===
+                    ''
+                      ? ''
+                      : Number(
+                          event.target.value
+                        ),
+                })
+              }
+            />
+          </Field>
+
+          <Field label="Status">
+            <select
+              value={
+                values.status
+              }
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  status:
+                    event.target
+                      .value as FlatFormValues['status'],
+                })
+              }
+            >
+              <option value="vacant">
+                Vacant
+              </option>
+
+              <option value="occupied">
+                Occupied
+              </option>
+            </select>
+          </Field>
+        </FormShell>
+      </DetailDrawer>
+    </div>
+  );
 }
+
+/*
+|--------------------------------------------------------------------------
+| RENT
+|--------------------------------------------------------------------------
+*/
+
+export function RentSection({
+  payments,
+}: RentSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [status, setStatus] =
+    useState('All statuses');
+
+  const records = useMemo(
+    () =>
+      payments.filter((item) => {
+        const tenantName =
+          item.tenant?.user?.name ??
+          '';
+
+        const flatNumber =
+          item.tenant?.flat
+            ?.flat_number ??
+          '';
+
+        const matchesSearch =
+          matches(
+            [
+              tenantName,
+              flatNumber,
+              item.amount,
+              item.payment_date,
+              item.status,
+            ],
+            search
+          );
+
+        const matchesStatus =
+          status === 'All statuses' ||
+          item.status === status;
+
+        return (
+          matchesSearch &&
+          matchesStatus
+        );
+      }),
+    [
+      payments,
+      search,
+      status,
+    ]
+  );
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Finance"
+        title="Rent Payments"
+        description="View rent payment records and their current status."
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search payments"
+      >
+        <FilterSelect
+          label="Payment status"
+          value={status}
+          options={[
+            'All statuses',
+            'paid',
+            'pending',
+          ]}
+          onChange={setStatus}
+        />
+      </ModuleToolbar>
+
+      {records.length ? (
+        <DataTable
+          headers={[
+            'Tenant',
+            'Flat',
+            'Amount',
+            'Payment date',
+            'Status',
+          ]}
+        >
+          {records.map((item) => (
+            <tr
+              key={item.id}
+            >
+              <td className="manager-table__primary">
+                {item.tenant?.user?.name ??
+                  'Unknown tenant'}
+              </td>
+
+              <td>
+                {item.tenant?.flat
+                  ?.flat_number ??
+                  '—'}
+              </td>
+
+              <td>
+                {money(
+                  Number(
+                    item.amount
+                  )
+                )}
+              </td>
+
+              <td>
+                {item.payment_date}
+              </td>
+
+              <td>
+                <StatusBadge
+                  value={normalise(
+                    item.status
+                  )}
+                />
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      ) : (
+        <EmptyState
+          title="No rent payments found"
+          description="No rent payment records returned from Laravel."
+        />
+      )}
+    </div>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| NOTICES
+|--------------------------------------------------------------------------
+*/
+
+export function NoticesSection({
+  notices,
+  onCreate,
+  onUpdate,
+  onDelete,
+  submitting = false,
+  apiError,
+  successMessage,
+}: NoticesSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const [editing, setEditing] =
+    useState<Notice | null>(null);
+
+  const [values, setValues] =
+    useState<NoticeFormValues>({
+      ...defaultNotice,
+    });
+
+  const [errors, setErrors] =
+    useState<FormErrors>({});
+
+  const records = useMemo(
+    () =>
+      notices.filter((item) =>
+        matches(
+          [
+            item.title,
+            item.content,
+          ],
+          search
+        )
+      ),
+    [
+      notices,
+      search,
+    ]
+  );
+
+  const openCreate = () => {
+    setEditing(null);
+
+    setValues({
+      ...defaultNotice,
+    });
+
+    setErrors({});
+    setFormOpen(true);
+  };
+
+  const openEdit = (
+    notice: Notice
+  ) => {
+    setEditing(notice);
+
+    setValues({
+      title:
+        notice.title ?? '',
+
+      content:
+        notice.content ?? '',
+    });
+
+    setErrors({});
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    if (submitting) {
+      return;
+    }
+
+    setFormOpen(false);
+    setEditing(null);
+    setErrors({});
+  };
+
+  const submitNotice = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    const nextErrors: FormErrors = {};
+
+    if (!values.title.trim()) {
+      nextErrors.title =
+        'Notice title is required.';
+    }
+
+    if (!values.content.trim()) {
+      nextErrors.content =
+        'Notice content is required.';
+    }
+
+    setErrors(nextErrors);
+
+    if (
+      Object.keys(nextErrors).length
+    ) {
+      return;
+    }
+
+    try {
+      if (editing) {
+        await onUpdate(
+          editing.id,
+          values
+        );
+      } else {
+        await onCreate(values);
+      }
+
+      closeForm();
+    } catch {
+      // Parent handles API error.
+    }
+  };
+
+  const deleteNotice = async (
+    notice: Notice
+  ) => {
+    const confirmed =
+      window.confirm(
+        `Delete "${notice.title}"? This cannot be undone.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await onDelete(
+        notice.id
+      );
+    } catch {
+      // Parent handles API error.
+    }
+  };
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Communications"
+        title="Notice Management"
+        description="Create and manage notices for residents."
+        actionLabel="Add Notice"
+        actionIcon="bi-megaphone"
+        onAction={openCreate}
+      />
+
+      <Feedback
+        message={
+          successMessage ??
+          apiError ??
+          ''
+        }
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search notices"
+      />
+
+      {records.length ? (
+        <div className="manager-notice-grid">
+          {records.map((item) => (
+            <article
+              className="manager-notice-card"
+              key={item.id}
+            >
+              <div>
+                <span className="manager-notice-card__icon">
+                  <i className="bi bi-megaphone" />
+                </span>
+              </div>
+
+              <h2>
+                {item.title}
+              </h2>
+
+              <p>
+                {item.content}
+              </p>
+
+              <footer>
+                <time>
+                  {item.created_at ??
+                    '—'}
+                </time>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openEdit(
+                        item
+                      )
+                    }
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      deleteNotice(
+                        item
+                      )
+                    }
+                    disabled={
+                      submitting
+                    }
+                  >
+                    Delete
+                  </button>
+                </div>
+              </footer>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="No notices found"
+          description="No notices returned from Laravel."
+        />
+      )}
+
+      <DetailDrawer
+        open={formOpen}
+        title={
+          editing
+            ? 'Edit notice'
+            : 'Add notice'
+        }
+        subtitle="Resident communication"
+        onClose={closeForm}
+      >
+        <FormShell
+          onSubmit={submitNotice}
+          onCancel={closeForm}
+          submitLabel={
+            editing
+              ? 'Save changes'
+              : 'Add notice'
+          }
+          submitting={submitting}
+          error={apiError}
+          success={successMessage}
+        >
+          <Field
+            label="Notice title *"
+            error={errors.title}
+            wide
+          >
+            <input
+              type="text"
+              value={
+                values.title
+              }
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  title:
+                    event.target.value,
+                })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Content *"
+            error={
+              errors.content
+            }
+            wide
+          >
+            <textarea
+              rows={8}
+              value={
+                values.content
+              }
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  content:
+                    event.target.value,
+                })
+              }
+            />
+          </Field>
+        </FormShell>
+      </DetailDrawer>
+    </div>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| DATA TABLE
+|--------------------------------------------------------------------------
+*/
+
+function DataTable({
+  headers,
+  children,
+}: {
+  headers: readonly string[];
+  children: ReactNode;
+}) {
+  return (
+    <div className="manager-panel manager-data-panel">
+      <div className="table-responsive manager-table-wrap">
+        <table className="table manager-table align-middle mb-0">
+          <thead>
+            <tr>
+              {headers.map(
+                (header) => (
+                  <th
+                    key={header}
+                    scope="col"
+                  >
+                    {header}
+                  </th>
+                )
+              )}
+            </tr>
+          </thead>
+
+          <tbody>
+            {children}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+

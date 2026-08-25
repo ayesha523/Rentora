@@ -1,67 +1,2444 @@
-import { useState } from 'react';
-import {
-  apartments, flats, managementComplaints, maintenanceRequests, notices, payments, reports, tenants, utilityBills,
-  type Apartment, type Tenant,
-} from '../../../data/managerManagementData';
+import { useMemo, useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
+
+import { reports } from '../../../data/managerManagementData';
+
+import type {
+  Apartment,
+  ApartmentFormValues,
+  Complaint,
+  ComplaintFormValues,
+  Flat,
+  FlatFormValues,
+  MaintenanceRequest,
+  MaintenanceRequestFormValues,
+  Notice,
+  NoticeFormValues,
+  RecordId,
+  RentPayment,
+  RentPaymentFormValues,
+  Tenant,
+  TenantFormValues,
+  UtilityBill,
+  UtilityBillFormValues,
+} from '../../../types/managerRecords';
+
 import ManagerSectionHeader from '../ManagerSectionHeader';
 import StatusBadge from '../StatusBadge';
-import { DetailDrawer, EmptyState, Feedback, FilterSelect, ModuleToolbar } from '../ManagerModuleElements';
 
-const matches = (values: readonly string[], search: string) => values.some((value) => value.toLowerCase().includes(search.toLowerCase()));
-const actionMessage = (action: string) => `${action} is ready for backend integration.`;
+import {
+  DetailDrawer,
+  EmptyState,
+  Feedback,
+  FilterSelect,
+  ModuleToolbar,
+} from '../ManagerModuleElements';
 
-export function ApartmentsSection() {
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState('All statuses'); const [selected, setSelected] = useState<Apartment | null>(null); const [feedback, setFeedback] = useState('');
-  const records = apartments.filter((item) => matches([item.name, item.address, item.contact ?? ''], search) && (status === 'All statuses' || item.status === status));
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Portfolio" title="Apartment Management" description="Manage buildings, capacity, and property contacts." actionLabel="Add Apartment" actionIcon="bi-building-add" onAction={() => setFeedback(actionMessage('Add Apartment'))} /><Feedback message={feedback} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search apartments"><FilterSelect label="Property status" value={status} options={['All statuses', 'Active', 'Maintenance']} onChange={setStatus} /></ModuleToolbar>{records.length ? <div className="manager-property-grid">{records.map((item) => <article className="manager-property-card" key={item.id}><div className="manager-property-card__visual"><i className={`bi ${item.image}`} /><StatusBadge value={item.status} /></div><div className="manager-property-card__body"><span>{item.address}</span><h2>{item.name}</h2><div className="manager-property-metrics"><div><strong>{item.flats}</strong><small>Total flats</small></div><div><strong>{item.occupied}</strong><small>Occupied</small></div><div><strong>{item.vacant}</strong><small>Vacant</small></div></div><p><i className="bi bi-person" /> {item.contact}</p><button type="button" onClick={() => setSelected(item)}>View property <i className="bi bi-arrow-right" /></button></div></article>)}</div> : <EmptyState />}<DetailDrawer open={Boolean(selected)} title={selected?.name ?? ''} subtitle={selected?.address ?? ''} onClose={() => setSelected(null)}>{selected && <div className="manager-detail-grid"><div><span>Total flats</span><strong>{selected.flats}</strong></div><div><span>Occupied</span><strong>{selected.occupied}</strong></div><div><span>Vacant</span><strong>{selected.vacant}</strong></div><div><span>Status</span><StatusBadge value={selected.status} /></div><div className="manager-detail-grid__wide"><span>Property contact</span><strong>{selected.contact}</strong></div></div>}</DetailDrawer></div>;
+/* -------------------------------------------------------------------------- */
+/* Shared helpers                                                             */
+/* -------------------------------------------------------------------------- */
+
+const matches = (
+  values: readonly string[],
+  search: string
+) => {
+  const normalizedSearch = search.trim().toLowerCase();
+
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  return values.some((value) =>
+    value.toLowerCase().includes(normalizedSearch)
+  );
+};
+
+const displayValue = (
+  value: unknown,
+  fallback = '—'
+): string => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return fallback;
+  }
+
+  return String(value);
+};
+
+const tenantName = (tenant: Tenant): string =>
+  tenant.user?.name ?? `Tenant #${tenant.id}`;
+
+const tenantEmail = (tenant: Tenant): string =>
+  tenant.user?.email ?? '';
+
+const tenantPhone = (tenant: Tenant): string =>
+  tenant.user?.phone ?? '';
+
+const flatNumber = (tenant: Tenant): string =>
+  tenant.flat?.flat_number ?? '—';
+
+const apartmentName = (tenant: Tenant): string =>
+  tenant.flat?.apartment?.name ?? '—';
+
+const apartmentForFlat = (
+  flat: Flat,
+  apartments: Apartment[]
+): string => {
+  return (
+    flat.apartment?.name ??
+    apartments.find(
+      (apartment) =>
+        String(apartment.id) ===
+        String(flat.apartment_id)
+    )?.name ??
+    '—'
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* Shared modal                                                               */
+/* -------------------------------------------------------------------------- */
+
+function FormModal({
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div
+      className="manager-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="manager-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manager-modal-title"
+      >
+        <div className="manager-modal__header">
+          <h2 id="manager-modal-title">
+            {title}
+          </h2>
+
+          <button
+            type="button"
+            className="manager-icon-button"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <i className="bi bi-x-lg" />
+          </button>
+        </div>
+
+        <div className="manager-modal__body">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export function FlatsSection() {
-  const [search, setSearch] = useState(''); const [occupancy, setOccupancy] = useState('All occupancy'); const [property, setProperty] = useState('All apartments'); const [feedback, setFeedback] = useState('');
-  const properties = ['All apartments', ...new Set(flats.map((item) => item.apartment))];
-  const records = flats.filter((item) => matches([item.number, item.apartment, item.tenant], search) && (occupancy === 'All occupancy' || item.occupancy === occupancy) && (property === 'All apartments' || item.apartment === property));
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Inventory" title="Flat Management" description="Track unit availability, residents, rent, and lease status." actionLabel="Add Flat" actionIcon="bi-plus-square" onAction={() => setFeedback(actionMessage('Add Flat'))} /><Feedback message={feedback} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search flats"><FilterSelect label="Occupancy" value={occupancy} options={['All occupancy', 'Occupied', 'Vacant', 'Maintenance']} onChange={setOccupancy} /><FilterSelect label="Apartment" value={property} options={properties} onChange={setProperty} /></ModuleToolbar><DataTable headers={['Flat', 'Apartment', 'Floor', 'Tenant', 'Monthly rent', 'Occupancy', 'Lease']}>{records.map((item) => <tr key={item.id}><td className="manager-table__primary">{item.number}</td><td>{item.apartment}</td><td>{item.floor}</td><td>{item.tenant}</td><td>{item.rent}</td><td><StatusBadge value={item.occupancy} /></td><td><StatusBadge value={item.lease} /></td></tr>)}</DataTable>{!records.length && <EmptyState />}</div>;
+function FormActions({
+  submitting,
+  onCancel,
+  submitLabel,
+}: {
+  submitting: boolean;
+  onCancel: () => void;
+  submitLabel: string;
+}) {
+  return (
+    <div className="manager-form-actions">
+      <button
+        type="button"
+        className="manager-secondary-button"
+        onClick={onCancel}
+        disabled={submitting}
+      >
+        Cancel
+      </button>
+
+      <button
+        type="submit"
+        className="manager-primary-button"
+        disabled={submitting}
+      >
+        {submitting ? (
+          <>
+            <i className="bi bi-arrow-repeat" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <i className="bi bi-check-lg" />
+            {submitLabel}
+          </>
+        )}
+      </button>
+    </div>
+  );
 }
 
-export function TenantsSection() {
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState('All accounts'); const [selected, setSelected] = useState<Tenant | null>(null); const [feedback, setFeedback] = useState('');
-  const records = tenants.filter((item) => matches([item.name, item.flat, item.apartment, item.contact ?? ''], search) && (status === 'All accounts' || item.accountStatus === status));
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Residents" title="Tenant Management" description="A central directory for residents, leases, and account health." actionLabel="Add Tenant" actionIcon="bi-person-plus" onAction={() => setFeedback(actionMessage('Add Tenant'))} /><Feedback message={feedback} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search tenants"><FilterSelect label="Account status" value={status} options={['All accounts', 'Active', 'Notice']} onChange={setStatus} /></ModuleToolbar><DataTable headers={['Tenant', 'Residence', 'Contact', 'Lease period', 'Rent', 'Account', '']} >{records.map((item) => <tr key={item.id}><td><div className="manager-person"><span>{item.name.split(' ').map((part) => part[0]).join('')}</span><strong>{item.name}</strong></div></td><td><strong>{item.flat}</strong><small>{item.apartment}</small></td><td>{item.contact}</td><td>{item.lease}</td><td><StatusBadge value={item.rentStatus} /></td><td><StatusBadge value={item.accountStatus} /></td><td><button className="manager-text-button" type="button" onClick={() => setSelected(item)}>View details</button></td></tr>)}</DataTable>{!records.length && <EmptyState />}<DetailDrawer open={Boolean(selected)} title={selected?.name ?? ''} subtitle={`${selected?.apartment ?? ''} · ${selected?.flat ?? ''}`} onClose={() => setSelected(null)}>{selected && <div className="manager-detail-grid"><div><span>Contact</span><strong>{selected.contact}</strong></div><div><span>Lease</span><strong>{selected.lease}</strong></div><div><span>Rent status</span><StatusBadge value={selected.rentStatus} /></div><div><span>Account</span><StatusBadge value={selected.accountStatus} /></div></div>}</DetailDrawer></div>;
+function Field({
+  label,
+  children,
+  required = false,
+}: {
+  label: string;
+  children: ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <label className="manager-form-field">
+      <span>
+        {label}
+        {required ? ' *' : ''}
+      </span>
+
+      {children}
+    </label>
+  );
 }
 
-export function RentSection() {
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState('All statuses'); const [month, setMonth] = useState('All months'); const [feedback, setFeedback] = useState('');
-  const records = payments.filter((item) => matches([item.tenant, item.apartment, item.flat], search) && (status === 'All statuses' || item.status === status) && (month === 'All months' || item.month === month));
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Finance" title="Rent Collection" description="Track monthly income, outstanding balances, and payment activity." actionLabel="Record Payment" actionIcon="bi-receipt" onAction={() => setFeedback(actionMessage('Record Payment'))} /><Feedback message={feedback} /><SummaryStrip items={[['Expected this month', null, 'bi-graph-up-arrow'], ['Collected', null, 'bi-check2-circle'], ['Pending payments', null, 'bi-hourglass-split'], ['Overdue balance', null, 'bi-exclamation-circle']]} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search payments"><FilterSelect label="Month" value={month} options={['All months']} onChange={setMonth} /><FilterSelect label="Payment status" value={status} options={['All statuses', 'Paid', 'Pending', 'Overdue']} onChange={setStatus} /></ModuleToolbar><DataTable headers={['Tenant', 'Apartment / Flat', 'Month', 'Amount', 'Due date', 'Payment date', 'Status']}>{records.map((item) => <tr key={item.id}><td className="manager-table__primary">{item.tenant}</td><td><strong>{item.flat}</strong><small>{item.apartment}</small></td><td>{item.month}</td><td>{item.amount ?? '—'}</td><td>{item.dueDate ?? '—'}</td><td>{item.paymentDate ?? '—'}</td><td><StatusBadge value={item.status} /></td></tr>)}</DataTable>{!records.length && <EmptyState />}</div>;
+/* -------------------------------------------------------------------------- */
+/* Apartments                                                                 */
+/* -------------------------------------------------------------------------- */
+
+type ApartmentsSectionProps = {
+  apartments: Apartment[];
+
+  onCreate: (
+    values: ApartmentFormValues
+  ) => void | Promise<void>;
+
+  onUpdate: (
+    id: RecordId,
+    values: ApartmentFormValues
+  ) => void | Promise<void>;
+
+  onDelete: (
+    id: RecordId
+  ) => void | Promise<void>;
+
+  submitting?: boolean;
+  apiError?: string | null;
+  successMessage?: string | null;
+};
+
+export function ApartmentsSection({
+  apartments,
+  onCreate,
+  onUpdate,
+  onDelete,
+  submitting = false,
+  apiError,
+  successMessage,
+}: ApartmentsSectionProps) {
+  const [search, setSearch] = useState('');
+
+  const [selected, setSelected] =
+    useState<Apartment | null>(null);
+
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const [editing, setEditing] =
+    useState<Apartment | null>(null);
+
+  const [form, setForm] =
+    useState<ApartmentFormValues>({
+      name: '',
+      address: '',
+    });
+
+  const [formError, setFormError] =
+    useState('');
+
+  const records = useMemo(() => {
+    return apartments.filter((item) =>
+      matches(
+        [
+          item.name,
+          item.address,
+          String(item.id),
+        ],
+        search
+      )
+    );
+  }, [apartments, search]);
+
+  const openCreate = () => {
+    setEditing(null);
+
+    setForm({
+      name: '',
+      address: '',
+    });
+
+    setFormError('');
+    setFormOpen(true);
+  };
+
+  const openEdit = (
+    apartment: Apartment
+  ) => {
+    setEditing(apartment);
+
+    setForm({
+      name: apartment.name ?? '',
+      address: apartment.address ?? '',
+    });
+
+    setFormError('');
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    if (submitting) {
+      return;
+    }
+
+    setFormOpen(false);
+    setEditing(null);
+    setFormError('');
+  };
+
+  const submitForm = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (!form.name.trim()) {
+      setFormError(
+        'Apartment name is required.'
+      );
+      return;
+    }
+
+    if (!form.address.trim()) {
+      setFormError(
+        'Apartment address is required.'
+      );
+      return;
+    }
+
+    setFormError('');
+
+    try {
+      if (editing) {
+        await onUpdate(
+          editing.id,
+          form
+        );
+      } else {
+        await onCreate(form);
+      }
+
+      closeForm();
+    } catch {
+      setFormError(
+        'Unable to save apartment.'
+      );
+    }
+  };
+
+  const deleteApartment = async (
+    apartment: Apartment
+  ) => {
+    const confirmed = window.confirm(
+      `Delete "${apartment.name}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await onDelete(apartment.id);
+
+    if (
+      selected &&
+      String(selected.id) ===
+        String(apartment.id)
+    ) {
+      setSelected(null);
+    }
+  };
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Portfolio"
+        title="Apartment Management"
+        description="Manage buildings and their flat capacity."
+        actionLabel="Add Apartment"
+        actionIcon="bi-building-add"
+        onAction={openCreate}
+      />
+
+      <Feedback
+        message={
+          successMessage ??
+          apiError ??
+          ''
+        }
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search apartments"
+      />
+
+      {records.length ? (
+        <div className="manager-property-grid">
+          {records.map((item) => {
+            const totalFlats =
+              item.total_flats ??
+              item.flats?.length ??
+              0;
+
+            const occupiedFlats =
+              item.occupied_flats ??
+              item.flats?.filter(
+                (flat) =>
+                  flat.status === 'occupied'
+              ).length ??
+              0;
+
+            const vacantFlats =
+              item.vacant_flats ??
+              Math.max(
+                totalFlats -
+                  occupiedFlats,
+                0
+              );
+
+            return (
+              <article
+                className="manager-property-card"
+                key={item.id}
+              >
+                <div className="manager-property-card__visual">
+                  <i className="bi bi-building" />
+                </div>
+
+                <div className="manager-property-card__body">
+                  <span>
+                    {item.address}
+                  </span>
+
+                  <h2>{item.name}</h2>
+
+                  <div className="manager-property-metrics">
+                    <div>
+                      <strong>
+                        {totalFlats}
+                      </strong>
+
+                      <small>
+                        Total flats
+                      </small>
+                    </div>
+
+                    <div>
+                      <strong>
+                        {occupiedFlats}
+                      </strong>
+
+                      <small>
+                        Occupied
+                      </small>
+                    </div>
+
+                    <div>
+                      <strong>
+                        {vacantFlats}
+                      </strong>
+
+                      <small>
+                        Vacant
+                      </small>
+                    </div>
+                  </div>
+
+                  <p>
+                    <i className="bi bi-building" />{' '}
+                    {item.address}
+                  </p>
+
+                  <div className="manager-card-actions">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelected(item)
+                      }
+                    >
+                      View property{' '}
+                      <i className="bi bi-arrow-right" />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="manager-secondary-button"
+                      onClick={() =>
+                        openEdit(item)
+                      }
+                    >
+                      <i className="bi bi-pencil" />
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      className="manager-danger-button"
+                      onClick={() =>
+                        deleteApartment(item)
+                      }
+                    >
+                      <i className="bi bi-trash" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          title="No apartments found"
+          description="No apartments returned from Laravel."
+        />
+      )}
+
+      <DetailDrawer
+        open={Boolean(selected)}
+        title={selected?.name ?? ''}
+        subtitle={
+          selected?.address ?? ''
+        }
+        onClose={() =>
+          setSelected(null)
+        }
+      >
+        {selected && (
+          <div className="manager-detail-grid">
+            <div>
+              <span>Total flats</span>
+
+              <strong>
+                {selected.total_flats ??
+                  selected.flats?.length ??
+                  0}
+              </strong>
+            </div>
+
+            <div>
+              <span>Occupied</span>
+
+              <strong>
+                {selected.occupied_flats ??
+                  selected.flats?.filter(
+                    (flat) =>
+                      flat.status ===
+                      'occupied'
+                  ).length ??
+                  0}
+              </strong>
+            </div>
+
+            <div>
+              <span>Vacant</span>
+
+              <strong>
+                {selected.vacant_flats ??
+                  selected.flats?.filter(
+                    (flat) =>
+                      flat.status ===
+                      'vacant'
+                  ).length ??
+                  0}
+              </strong>
+            </div>
+
+            <div>
+              <span>Manager ID</span>
+
+              <strong>
+                {displayValue(
+                  selected.manager_id
+                )}
+              </strong>
+            </div>
+
+            <div className="manager-detail-grid__wide">
+              <span>Address</span>
+
+              <strong>
+                {selected.address}
+              </strong>
+            </div>
+          </div>
+        )}
+      </DetailDrawer>
+
+      <FormModal
+        open={formOpen}
+        title={
+          editing
+            ? 'Edit Apartment'
+            : 'Add Apartment'
+        }
+        onClose={closeForm}
+      >
+        <form onSubmit={submitForm}>
+          {formError && (
+            <div className="manager-form-error">
+              {formError}
+            </div>
+          )}
+
+          <Field
+            label="Apartment name"
+            required
+          >
+            <input
+              type="text"
+              value={form.name}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  name: event.target.value,
+                })
+              }
+              placeholder="Apartment name"
+            />
+          </Field>
+
+          <Field
+            label="Address"
+            required
+          >
+            <textarea
+              value={form.address}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  address:
+                    event.target.value,
+                })
+              }
+              placeholder="Apartment address"
+              rows={4}
+            />
+          </Field>
+
+          <FormActions
+            submitting={submitting}
+            onCancel={closeForm}
+            submitLabel={
+              editing
+                ? 'Update Apartment'
+                : 'Create Apartment'
+            }
+          />
+        </form>
+      </FormModal>
+
+      {submitting && (
+        <div className="manager-loading">
+          Saving apartment...
+        </div>
+      )}
+    </div>
+  );
 }
 
-export function UtilitiesSection() {
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState('All statuses'); const [feedback, setFeedback] = useState('');
-  const records = utilityBills.filter((item) => matches([item.tenant, item.flat, item.month], search) && (status === 'All statuses' || item.status === status));
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Billing" title="Utility Bill Management" description="Review service charges and outstanding utility balances." actionLabel="Record Utility Bill" actionIcon="bi-plus-circle" onAction={() => setFeedback(actionMessage('Record Utility Bill'))} /><Feedback message={feedback} /><SummaryStrip items={[['Total billed', null, 'bi-receipt-cutoff'], ['Collected', null, 'bi-check2-circle'], ['Outstanding', null, 'bi-hourglass'], ['Overdue bills', null, 'bi-exclamation-circle']]} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search utility bills"><FilterSelect label="Billing status" value={status} options={['All statuses', 'Paid', 'Pending', 'Overdue']} onChange={setStatus} /></ModuleToolbar><DataTable headers={['Tenant / Flat', 'Electricity', 'Water', 'Gas', 'Month', 'Total', 'Due date', 'Status']}>{records.map((item) => <tr key={item.id}><td><strong>{item.tenant}</strong><small>{item.flat}</small></td><td>{item.electricity ?? '—'}</td><td>{item.water ?? '—'}</td><td>{item.gas ?? '—'}</td><td>{item.month}</td><td className="manager-table__primary">{item.total ?? '—'}</td><td>{item.dueDate ?? '—'}</td><td><StatusBadge value={item.status} /></td></tr>)}</DataTable>{!records.length && <EmptyState />}</div>;
+/* -------------------------------------------------------------------------- */
+/* Flats                                                                      */
+/* -------------------------------------------------------------------------- */
+
+type FlatsSectionProps = {
+  flats: Flat[];
+  apartments: Apartment[];
+
+  onCreate: (
+    values: FlatFormValues
+  ) => void | Promise<void>;
+
+  onUpdate: (
+    id: RecordId,
+    values: FlatFormValues
+  ) => void | Promise<void>;
+
+  onDelete: (
+    id: RecordId
+  ) => void | Promise<void>;
+
+  submitting?: boolean;
+  apiError?: string | null;
+  successMessage?: string | null;
+};
+
+export function FlatsSection({
+  flats,
+  apartments,
+  onCreate,
+  onUpdate,
+  onDelete,
+  submitting = false,
+  apiError,
+  successMessage,
+}: FlatsSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [occupancy, setOccupancy] =
+    useState('All occupancy');
+
+  const [property, setProperty] =
+    useState('All apartments');
+
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const [editing, setEditing] =
+    useState<Flat | null>(null);
+
+  const [formError, setFormError] =
+    useState('');
+
+  const [values, setValues] =
+    useState<FlatFormValues>({
+      apartment_id: '',
+      flat_number: '',
+      floor: '',
+      rent_amount: '',
+      status: 'vacant',
+    });
+
+  const properties = useMemo(
+    () => [
+      'All apartments',
+      ...Array.from(
+        new Set(
+          apartments.map(
+            (item) => item.name
+          )
+        )
+      ),
+    ],
+    [apartments]
+  );
+
+  const records = useMemo(() => {
+    return flats.filter((item) => {
+      const propertyName =
+        apartmentForFlat(
+          item,
+          apartments
+        );
+
+      const searchMatches = matches(
+        [
+          item.flat_number,
+          String(item.floor),
+          propertyName,
+          item.tenant
+            ? tenantName(
+                item.tenant
+              )
+            : '',
+          item.tenant
+            ? tenantEmail(
+                item.tenant
+              )
+            : '',
+        ],
+        search
+      );
+
+      const occupancyMatches =
+        occupancy ===
+          'All occupancy' ||
+        item.status ===
+          occupancy.toLowerCase();
+
+      const propertyMatches =
+        property ===
+          'All apartments' ||
+        propertyName === property;
+
+      return (
+        searchMatches &&
+        occupancyMatches &&
+        propertyMatches
+      );
+    });
+  }, [
+    flats,
+    apartments,
+    search,
+    occupancy,
+    property,
+  ]);
+
+  const openCreate = () => {
+    setEditing(null);
+
+    setValues({
+      apartment_id: '',
+      flat_number: '',
+      floor: '',
+      rent_amount: '',
+      status: 'vacant',
+    });
+
+    setFormError('');
+    setFormOpen(true);
+  };
+
+  const openEdit = (
+    flat: Flat
+  ) => {
+    setEditing(flat);
+
+    setValues({
+      apartment_id:
+        flat.apartment_id ?? '',
+
+      flat_number:
+        flat.flat_number ?? '',
+
+      floor:
+        flat.floor ?? '',
+
+      rent_amount:
+        flat.rent_amount ?? '',
+
+      status:
+        flat.status ?? 'vacant',
+    });
+
+    setFormError('');
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    if (submitting) {
+      return;
+    }
+
+    setFormOpen(false);
+    setEditing(null);
+    setFormError('');
+  };
+
+  const submitFlat = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (
+      values.apartment_id === ''
+    ) {
+      setFormError(
+        'Choose an apartment.'
+      );
+      return;
+    }
+
+    if (
+      !String(
+        values.flat_number
+      ).trim()
+    ) {
+      setFormError(
+        'Flat/unit number is required.'
+      );
+      return;
+    }
+
+    if (
+      values.floor === '' ||
+      Number(values.floor) < 0
+    ) {
+      setFormError(
+        'Floor is required.'
+      );
+      return;
+    }
+
+    if (
+      values.rent_amount === '' ||
+      Number(values.rent_amount) < 0
+    ) {
+      setFormError(
+        'Rent amount is required and cannot be negative.'
+      );
+      return;
+    }
+
+    setFormError('');
+
+    try {
+      if (editing) {
+        await onUpdate(
+          editing.id,
+          values
+        );
+      } else {
+        await onCreate(values);
+      }
+
+      closeForm();
+    } catch {
+      setFormError(
+        'Unable to save flat.'
+      );
+    }
+  };
+
+  const deleteFlat = async (
+    flat: Flat
+  ) => {
+    const confirmed = window.confirm(
+      `Delete flat "${flat.flat_number}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await onDelete(flat.id);
+  };
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Inventory"
+        title="Flat Management"
+        description="Track unit availability, residents, and rent."
+        actionLabel="Add Flat"
+        actionIcon="bi-plus-square"
+        onAction={openCreate}
+      />
+
+      <Feedback
+        message={
+          successMessage ??
+          apiError ??
+          ''
+        }
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search flats"
+      >
+        <FilterSelect
+          label="Occupancy"
+          value={occupancy}
+          options={[
+            'All occupancy',
+            'Occupied',
+            'Vacant',
+          ]}
+          onChange={setOccupancy}
+        />
+
+        <FilterSelect
+          label="Apartment"
+          value={property}
+          options={properties}
+          onChange={setProperty}
+        />
+      </ModuleToolbar>
+
+      <DataTable
+        headers={[
+          'Flat',
+          'Apartment',
+          'Floor',
+          'Tenant',
+          'Monthly rent',
+          'Status',
+          'Actions',
+        ]}
+      >
+        {records.map((item) => (
+          <tr key={item.id}>
+            <td className="manager-table__primary">
+              {item.flat_number}
+            </td>
+
+            <td>
+              {apartmentForFlat(
+                item,
+                apartments
+              )}
+            </td>
+
+            <td>
+              {item.floor}
+            </td>
+
+            <td>
+              {item.tenant
+                ? tenantName(
+                    item.tenant
+                  )
+                : 'Vacant'}
+            </td>
+
+            <td>
+              {item.rent_amount}
+            </td>
+
+            <td>
+              <StatusBadge
+                value={item.status}
+              />
+            </td>
+
+            <td>
+              <div className="manager-table-actions">
+                <button
+                  type="button"
+                  className="manager-text-button"
+                  onClick={() =>
+                    openEdit(item)
+                  }
+                >
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  className="manager-text-button manager-danger-text"
+                  onClick={() =>
+                    deleteFlat(item)
+                  }
+                >
+                  Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </DataTable>
+
+      {!records.length && (
+        <EmptyState
+          title="No flats found"
+          description="No flats returned from Laravel."
+        />
+      )}
+
+      <FormModal
+        open={formOpen}
+        title={
+          editing
+            ? 'Edit Flat'
+            : 'Add Flat'
+        }
+        onClose={closeForm}
+      >
+        <form
+          onSubmit={submitFlat}
+        >
+          {formError && (
+            <div className="manager-form-error">
+              {formError}
+            </div>
+          )}
+
+          <Field
+            label="Parent apartment"
+            required
+          >
+            <select
+              value={String(
+                values.apartment_id
+              )}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  apartment_id:
+                    event.target.value,
+                })
+              }
+            >
+              <option value="">
+                Choose apartment
+              </option>
+
+              {apartments.map(
+                (apartment) => (
+                  <option
+                    key={apartment.id}
+                    value={
+                      apartment.id
+                    }
+                  >
+                    {apartment.name}
+                  </option>
+                )
+              )}
+            </select>
+          </Field>
+
+          <Field
+            label="Flat number"
+            required
+          >
+            <input
+              type="text"
+              value={
+                values.flat_number
+              }
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  flat_number:
+                    event.target.value,
+                })
+              }
+              placeholder="A-101"
+            />
+          </Field>
+
+          <Field
+            label="Floor"
+            required
+          >
+            <input
+              type="number"
+              value={String(
+                values.floor
+              )}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  floor:
+                    event.target.value ===
+                    ''
+                      ? ''
+                      : Number(
+                          event.target
+                            .value
+                        ),
+                })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Monthly rent"
+            required
+          >
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={String(
+                values.rent_amount
+              )}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  rent_amount:
+                    event.target.value ===
+                    ''
+                      ? ''
+                      : Number(
+                          event.target
+                            .value
+                        ),
+                })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Status"
+            required
+          >
+            <select
+              value={values.status}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  status:
+                    event.target
+                      .value as Flat['status'],
+                })
+              }
+            >
+              <option value="vacant">
+                Vacant
+              </option>
+
+              <option value="occupied">
+                Occupied
+              </option>
+            </select>
+          </Field>
+
+          <FormActions
+            submitting={submitting}
+            onCancel={closeForm}
+            submitLabel={
+              editing
+                ? 'Update Flat'
+                : 'Create Flat'
+            }
+          />
+        </form>
+      </FormModal>
+
+      {submitting && (
+        <div className="manager-loading">
+          Saving flat...
+        </div>
+      )}
+    </div>
+  );
 }
 
-export function ComplaintsSection() {
-  const [tab, setTab] = useState<'complaints' | 'maintenance'>('complaints'); const [feedback, setFeedback] = useState('');
-  const recordsAvailable = tab === 'complaints' ? managementComplaints.length > 0 : maintenanceRequests.length > 0;
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Service desk" title="Complaints & Maintenance" description="Coordinate resident support and property service work." actionLabel="Create Work Item" actionIcon="bi-plus-lg" onAction={() => setFeedback(actionMessage('Create Work Item'))} /><Feedback message={feedback} /><div className="manager-segments" role="tablist" aria-label="Service desk view"><button type="button" role="tab" aria-selected={tab === 'complaints'} className={tab === 'complaints' ? 'active' : ''} onClick={() => setTab('complaints')}>Complaints <span>—</span></button><button type="button" role="tab" aria-selected={tab === 'maintenance'} className={tab === 'maintenance' ? 'active' : ''} onClick={() => setTab('maintenance')}>Maintenance Requests <span>—</span></button></div>{tab === 'complaints' ? <DataTable headers={['Complaint', 'Tenant / Flat', 'Category', 'Priority', 'Submitted', 'Status']}>{managementComplaints.map((item) => <tr key={item.id}><td className="manager-table__primary">{item.title}</td><td><strong>{item.tenant}</strong><small>{item.flat}</small></td><td>{item.category}</td><td><StatusBadge value={item.priority} /></td><td>{item.submitted ?? '—'}</td><td><StatusBadge value={item.status} /></td></tr>)}</DataTable> : <DataTable headers={['Request', 'Property / Flat', 'Assigned to', 'Priority', 'Date', 'Status']}>{maintenanceRequests.map((item) => <tr key={item.id}><td className="manager-table__primary">{item.title}</td><td>{item.property}</td><td>{item.assigned ?? '—'}</td><td><StatusBadge value={item.priority} /></td><td>{item.date ?? '—'}</td><td><StatusBadge value={item.status} /></td></tr>)}</DataTable>}{!recordsAvailable && <EmptyState />}</div>;
+/* -------------------------------------------------------------------------- */
+/* Tenants                                                                    */
+/* -------------------------------------------------------------------------- */
+
+type TenantsSectionProps = {
+  tenants: Tenant[];
+
+  onCreate?: (
+    values: TenantFormValues
+  ) => void | Promise<void>;
+
+  onUpdate?: (
+    id: RecordId,
+    values: TenantFormValues
+  ) => void | Promise<void>;
+
+  onDelete?: (
+    id: RecordId
+  ) => void | Promise<void>;
+
+  submitting?: boolean;
+};
+
+export function TenantsSection({
+  tenants,
+  onCreate,
+  onUpdate,
+  onDelete,
+  submitting = false,
+}: TenantsSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [selected, setSelected] =
+    useState<Tenant | null>(null);
+
+  const records = useMemo(() => {
+    return tenants.filter((item) =>
+      matches(
+        [
+          tenantName(item),
+          tenantEmail(item),
+          tenantPhone(item),
+          flatNumber(item),
+          apartmentName(item),
+          item.lease_start,
+          item.lease_end,
+        ],
+        search
+      )
+    );
+  }, [tenants, search]);
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Residents"
+        title="Tenant Management"
+        description="Manage residents, flats, and lease information."
+        actionLabel="Add Tenant"
+        actionIcon="bi-person-plus"
+        onAction={() => {
+          if (onCreate) {
+            window.alert(
+              'Connect the Tenant form to onCreate.'
+            );
+          }
+        }}
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search tenants"
+      />
+
+      <DataTable
+        headers={[
+          'Tenant',
+          'Residence',
+          'Contact',
+          'Move in',
+          'Lease period',
+          'Account',
+          '',
+        ]}
+      >
+        {records.map((item) => (
+          <tr key={item.id}>
+            <td>
+              <div className="manager-person">
+                <span>
+                  {tenantName(item)
+                    .split(' ')
+                    .map(
+                      (part) =>
+                        part[0]
+                    )
+                    .join('')
+                    .toUpperCase()}
+                </span>
+
+                <strong>
+                  {tenantName(item)}
+                </strong>
+              </div>
+            </td>
+
+            <td>
+              <strong>
+                {flatNumber(item)}
+              </strong>
+
+              <small>
+                {apartmentName(item)}
+              </small>
+            </td>
+
+            <td>
+              {tenantPhone(item) ||
+                tenantEmail(item) ||
+                '—'}
+            </td>
+
+            <td>
+              {item.move_in_date}
+            </td>
+
+            <td>
+              {item.lease_start}
+              {' → '}
+              {item.lease_end}
+            </td>
+
+            <td>
+              <StatusBadge value="active" />
+            </td>
+
+            <td>
+              <button
+                className="manager-text-button"
+                type="button"
+                onClick={() =>
+                  setSelected(item)
+                }
+              >
+                View details
+              </button>
+            </td>
+          </tr>
+        ))}
+      </DataTable>
+
+      {!records.length && (
+        <EmptyState
+          title="No tenants found"
+          description="No tenants returned from Laravel."
+        />
+      )}
+
+      <DetailDrawer
+        open={Boolean(selected)}
+        title={
+          selected
+            ? tenantName(selected)
+            : ''
+        }
+        subtitle={
+          selected
+            ? `${apartmentName(selected)} · ${flatNumber(selected)}`
+            : ''
+        }
+        onClose={() =>
+          setSelected(null)
+        }
+      >
+        {selected && (
+          <div className="manager-detail-grid">
+            <div>
+              <span>Email</span>
+
+              <strong>
+                {tenantEmail(
+                  selected
+                ) || '—'}
+              </strong>
+            </div>
+
+            <div>
+              <span>Phone</span>
+
+              <strong>
+                {tenantPhone(
+                  selected
+                ) || '—'}
+              </strong>
+            </div>
+
+            <div>
+              <span>Move in</span>
+
+              <strong>
+                {selected.move_in_date}
+              </strong>
+            </div>
+
+            <div>
+              <span>Flat</span>
+
+              <strong>
+                {flatNumber(selected)}
+              </strong>
+            </div>
+
+            <div>
+              <span>Lease start</span>
+
+              <strong>
+                {selected.lease_start}
+              </strong>
+            </div>
+
+            <div>
+              <span>Lease end</span>
+
+              <strong>
+                {selected.lease_end}
+              </strong>
+            </div>
+          </div>
+        )}
+      </DetailDrawer>
+
+      {submitting && (
+        <div className="manager-loading">
+          Saving tenant...
+        </div>
+      )}
+    </div>
+  );
 }
 
-export function NoticesSection() {
-  const [search, setSearch] = useState(''); const [category, setCategory] = useState('All categories'); const [feedback, setFeedback] = useState('');
-  const categories = ['All categories', ...new Set(notices.map((item) => item.category))]; const records = notices.filter((item) => matches([item.title, item.description, item.audience], search) && (category === 'All categories' || item.category === category));
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Communications" title="Notice Management" description="Create and manage clear updates for residents." actionLabel="Publish Notice" actionIcon="bi-megaphone" onAction={() => setFeedback(actionMessage('Publish Notice'))} /><Feedback message={feedback} /><ModuleToolbar search={search} onSearch={setSearch} searchLabel="Search notices"><FilterSelect label="Category" value={category} options={categories} onChange={setCategory} /></ModuleToolbar>{records.length ? <div className="manager-notice-grid">{records.map((item) => <article className="manager-notice-card" key={item.id}><div><span className="manager-notice-card__icon"><i className="bi bi-megaphone" /></span><StatusBadge value={item.status} /></div><span>{item.category} · {item.audience}</span><h2>{item.title}</h2><p>{item.description}</p><footer><time>{item.published}</time><button type="button" onClick={() => setFeedback(actionMessage(`Edit ${item.title}`))}>Manage <i className="bi bi-arrow-right" /></button></footer></article>)}</div> : <EmptyState />}</div>;
+/* -------------------------------------------------------------------------- */
+/* Rent payments                                                              */
+/* -------------------------------------------------------------------------- */
+
+type RentSectionProps = {
+  payments: RentPayment[];
+
+  onCreate?: (
+    values: RentPaymentFormValues
+  ) => void | Promise<void>;
+
+  onUpdate?: (
+    id: RecordId,
+    values: RentPaymentFormValues
+  ) => void | Promise<void>;
+
+  onDelete?: (
+    id: RecordId
+  ) => void | Promise<void>;
+};
+
+export function RentSection({
+  payments,
+}: RentSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [status, setStatus] =
+    useState('All statuses');
+
+  const records = useMemo(() => {
+    return payments.filter((item) => {
+      const tenant = item.tenant
+        ? tenantName(item.tenant)
+        : '';
+
+      const paymentMatches =
+        matches(
+          [
+            tenant,
+            String(item.tenant_id),
+            String(item.amount),
+            item.payment_date,
+            item.status,
+          ],
+          search
+        );
+
+      const statusMatches =
+        status === 'All statuses' ||
+        item.status === status;
+
+      return (
+        paymentMatches &&
+        statusMatches
+      );
+    });
+  }, [payments, search, status]);
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Finance"
+        title="Rent Collection"
+        description="Track rent payments and payment status."
+        actionLabel="Record Payment"
+        actionIcon="bi-receipt"
+        onAction={() =>
+          window.alert(
+            'Connect the rent payment form here.'
+          )
+        }
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search payments"
+      >
+        <FilterSelect
+          label="Payment status"
+          value={status}
+          options={[
+            'All statuses',
+            'paid',
+            'pending',
+          ]}
+          onChange={setStatus}
+        />
+      </ModuleToolbar>
+
+      <DataTable
+        headers={[
+          'Tenant',
+          'Amount',
+          'Payment date',
+          'Status',
+        ]}
+      >
+        {records.map((item) => (
+          <tr key={item.id}>
+            <td className="manager-table__primary">
+              {item.tenant
+                ? tenantName(
+                    item.tenant
+                  )
+                : `Tenant #${item.tenant_id}`}
+            </td>
+
+            <td>{item.amount}</td>
+
+            <td>
+              {item.payment_date}
+            </td>
+
+            <td>
+              <StatusBadge
+                value={item.status}
+              />
+            </td>
+          </tr>
+        ))}
+      </DataTable>
+
+      {!records.length && (
+        <EmptyState
+          title="No rent payments found"
+          description="No rent payments returned from Laravel."
+        />
+      )}
+    </div>
+  );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Utilities                                                                  */
+/* -------------------------------------------------------------------------- */
+
+type UtilitiesSectionProps = {
+  utilityBills: UtilityBill[];
+
+  onCreate?: (
+    values: UtilityBillFormValues
+  ) => void | Promise<void>;
+};
+
+export function UtilitiesSection({
+  utilityBills,
+}: UtilitiesSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [status, setStatus] =
+    useState('All statuses');
+
+  const records = useMemo(() => {
+    return utilityBills.filter((item) => {
+      const tenant = item.tenant
+        ? tenantName(item.tenant)
+        : '';
+
+      const searchMatches =
+        matches(
+          [
+            tenant,
+            String(item.tenant_id),
+            item.type,
+            item.billing_month,
+            String(item.amount),
+          ],
+          search
+        );
+
+      const statusMatches =
+        status === 'All statuses' ||
+        item.status === status;
+
+      return (
+        searchMatches &&
+        statusMatches
+      );
+    });
+  }, [
+    utilityBills,
+    search,
+    status,
+  ]);
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Billing"
+        title="Utility Bill Management"
+        description="Review utility charges and payment status."
+        actionLabel="Record Utility Bill"
+        actionIcon="bi-plus-circle"
+        onAction={() =>
+          window.alert(
+            'Connect the utility bill form here.'
+          )
+        }
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search utility bills"
+      >
+        <FilterSelect
+          label="Billing status"
+          value={status}
+          options={[
+            'All statuses',
+            'paid',
+            'unpaid',
+          ]}
+          onChange={setStatus}
+        />
+      </ModuleToolbar>
+
+      <DataTable
+        headers={[
+          'Tenant',
+          'Type',
+          'Amount',
+          'Billing month',
+          'Status',
+        ]}
+      >
+        {records.map((item) => (
+          <tr key={item.id}>
+            <td>
+              {item.tenant
+                ? tenantName(
+                    item.tenant
+                  )
+                : `Tenant #${item.tenant_id}`}
+            </td>
+
+            <td>{item.type}</td>
+
+            <td>{item.amount}</td>
+
+            <td>
+              {item.billing_month}
+            </td>
+
+            <td>
+              <StatusBadge
+                value={item.status}
+              />
+            </td>
+          </tr>
+        ))}
+      </DataTable>
+
+      {!records.length && (
+        <EmptyState
+          title="No utility bills found"
+          description="No utility bills returned from Laravel."
+        />
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Complaints & Maintenance                                                   */
+/* -------------------------------------------------------------------------- */
+
+type ComplaintsSectionProps = {
+  complaints: Complaint[];
+  maintenanceRequests: MaintenanceRequest[];
+
+  onCreateComplaint?: (
+    values: ComplaintFormValues
+  ) => void | Promise<void>;
+
+  onCreateMaintenance?: (
+    values: MaintenanceRequestFormValues
+  ) => void | Promise<void>;
+};
+
+export function ComplaintsSection({
+  complaints,
+  maintenanceRequests,
+  onCreateComplaint,
+  onCreateMaintenance,
+}: ComplaintsSectionProps) {
+  const [tab, setTab] =
+    useState<
+      'complaints' | 'maintenance'
+    >('complaints');
+
+  const [search, setSearch] =
+    useState('');
+
+  const complaintRecords =
+    useMemo(() => {
+      return complaints.filter(
+        (item) => {
+          const tenant =
+            item.tenant
+              ? tenantName(
+                  item.tenant
+                )
+              : '';
+
+          return matches(
+            [
+              item.title,
+              item.description,
+              item.status,
+              tenant,
+            ],
+            search
+          );
+        }
+      );
+    }, [complaints, search]);
+
+  const maintenanceRecords =
+    useMemo(() => {
+      return maintenanceRequests.filter(
+        (item) => {
+          const complaintTitle =
+            item.complaint?.title ??
+            '';
+
+          const assigned =
+            item.assigned_user?.name ??
+            '';
+
+          return matches(
+            [
+              complaintTitle,
+              item.remarks ?? '',
+              item.status,
+              assigned,
+            ],
+            search
+          );
+        }
+      );
+    }, [
+      maintenanceRequests,
+      search,
+    ]);
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Service desk"
+        title="Complaints & Maintenance"
+        description="Manage resident complaints and maintenance work."
+        actionLabel={
+          tab === 'complaints'
+            ? 'Create Complaint'
+            : 'Create Maintenance'
+        }
+        actionIcon="bi-plus-lg"
+        onAction={() => {
+          if (
+            tab === 'complaints'
+          ) {
+            onCreateComplaint?.({
+              tenant_id: '',
+              title: '',
+              description: '',
+              status: 'open',
+            });
+          } else {
+            onCreateMaintenance?.({
+              complaint_id: '',
+              assigned_to: '',
+              remarks: '',
+              status: 'pending',
+            });
+          }
+        }}
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search service records"
+      />
+
+      <div
+        className="manager-segments"
+        role="tablist"
+        aria-label="Service desk view"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={
+            tab === 'complaints'
+          }
+          className={
+            tab === 'complaints'
+              ? 'active'
+              : ''
+          }
+          onClick={() =>
+            setTab('complaints')
+          }
+        >
+          Complaints
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={
+            tab === 'maintenance'
+          }
+          className={
+            tab === 'maintenance'
+              ? 'active'
+              : ''
+          }
+          onClick={() =>
+            setTab('maintenance')
+          }
+        >
+          Maintenance Requests
+        </button>
+      </div>
+
+      {tab === 'complaints' ? (
+        <>
+          <DataTable
+            headers={[
+              'Complaint',
+              'Tenant',
+              'Description',
+              'Status',
+              'Created',
+            ]}
+          >
+            {complaintRecords.map(
+              (item) => (
+                <tr key={item.id}>
+                  <td className="manager-table__primary">
+                    {item.title}
+                  </td>
+
+                  <td>
+                    {item.tenant
+                      ? tenantName(
+                          item.tenant
+                        )
+                      : `Tenant #${item.tenant_id}`}
+                  </td>
+
+                  <td>
+                    {item.description}
+                  </td>
+
+                  <td>
+                    <StatusBadge
+                      value={
+                        item.status
+                      }
+                    />
+                  </td>
+
+                  <td>
+                    {item.created_at ??
+                      '—'}
+                  </td>
+                </tr>
+              )
+            )}
+          </DataTable>
+
+          {!complaintRecords.length && (
+            <EmptyState
+              title="No complaints found"
+              description="No complaints returned from Laravel."
+            />
+          )}
+        </>
+      ) : (
+        <>
+          <DataTable
+            headers={[
+              'Complaint',
+              'Assigned to',
+              'Remarks',
+              'Status',
+              'Created',
+            ]}
+          >
+            {maintenanceRecords.map(
+              (item) => (
+                <tr key={item.id}>
+                  <td className="manager-table__primary">
+                    {item.complaint
+                      ?.title ??
+                      `Complaint #${item.complaint_id}`}
+                  </td>
+
+                  <td>
+                    {item.assigned_user
+                      ?.name ??
+                      'Unassigned'}
+                  </td>
+
+                  <td>
+                    {item.remarks ??
+                      '—'}
+                  </td>
+
+                  <td>
+                    <StatusBadge
+                      value={
+                        item.status
+                      }
+                    />
+                  </td>
+
+                  <td>
+                    {item.created_at ??
+                      '—'}
+                  </td>
+                </tr>
+              )
+            )}
+          </DataTable>
+
+          {!maintenanceRecords.length && (
+            <EmptyState
+              title="No maintenance requests found"
+              description="No maintenance requests returned from Laravel."
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Notices                                                                    */
+/* -------------------------------------------------------------------------- */
+
+type NoticesSectionProps = {
+  notices: Notice[];
+
+  onCreate: (
+    values: NoticeFormValues
+  ) => void | Promise<void>;
+
+  onUpdate: (
+    id: RecordId,
+    values: NoticeFormValues
+  ) => void | Promise<void>;
+
+  onDelete: (
+    id: RecordId
+  ) => void | Promise<void>;
+
+  submitting?: boolean;
+  apiError?: string | null;
+  successMessage?: string | null;
+};
+
+export function NoticesSection({
+  notices,
+  onCreate,
+  onUpdate,
+  onDelete,
+  submitting = false,
+  apiError,
+  successMessage,
+}: NoticesSectionProps) {
+  const [search, setSearch] =
+    useState('');
+
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const [editing, setEditing] =
+    useState<Notice | null>(null);
+
+  const [formError, setFormError] =
+    useState('');
+
+  const [values, setValues] =
+    useState<NoticeFormValues>({
+      title: '',
+      content: '',
+    });
+
+  const records = useMemo(() => {
+    return notices.filter((item) =>
+      matches(
+        [
+          item.title,
+          item.content,
+          String(item.published_by),
+        ],
+        search
+      )
+    );
+  }, [notices, search]);
+
+  const openCreate = () => {
+    setEditing(null);
+
+    setValues({
+      title: '',
+      content: '',
+    });
+
+    setFormError('');
+    setFormOpen(true);
+  };
+
+  const openEdit = (
+    notice: Notice
+  ) => {
+    setEditing(notice);
+
+    setValues({
+      title: notice.title ?? '',
+      content: notice.content ?? '',
+    });
+
+    setFormError('');
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    if (submitting) {
+      return;
+    }
+
+    setFormOpen(false);
+    setEditing(null);
+    setFormError('');
+  };
+
+  const submitNotice = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (!values.title.trim()) {
+      setFormError(
+        'Notice title is required.'
+      );
+      return;
+    }
+
+    if (!values.content.trim()) {
+      setFormError(
+        'Notice content is required.'
+      );
+      return;
+    }
+
+    setFormError('');
+
+    try {
+      if (editing) {
+        await onUpdate(
+          editing.id,
+          values
+        );
+      } else {
+        await onCreate(values);
+      }
+
+      closeForm();
+    } catch {
+      setFormError(
+        'Unable to save notice.'
+      );
+    }
+  };
+
+  const deleteNotice = async (
+    notice: Notice
+  ) => {
+    const confirmed = window.confirm(
+      `Delete notice "${notice.title}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await onDelete(notice.id);
+  };
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Communications"
+        title="Notice Management"
+        description="Create and manage updates for residents."
+        actionLabel="Publish Notice"
+        actionIcon="bi-megaphone"
+        onAction={openCreate}
+      />
+
+      <Feedback
+        message={
+          successMessage ??
+          apiError ??
+          ''
+        }
+      />
+
+      <ModuleToolbar
+        search={search}
+        onSearch={setSearch}
+        searchLabel="Search notices"
+      />
+
+      {records.length ? (
+        <div className="manager-notice-grid">
+          {records.map((item) => (
+            <article
+              className="manager-notice-card"
+              key={item.id}
+            >
+              <div>
+                <span className="manager-notice-card__icon">
+                  <i className="bi bi-megaphone" />
+                </span>
+              </div>
+
+              <span>
+                Published by manager #
+                {item.published_by}
+              </span>
+
+              <h2>{item.title}</h2>
+
+              <p>
+                {item.content}
+              </p>
+
+              <footer>
+                <time>
+                  {item.created_at ??
+                    '—'}
+                </time>
+
+                <div className="manager-card-actions">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openEdit(item)
+                    }
+                  >
+                    Edit{' '}
+                    <i className="bi bi-pencil" />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="manager-danger-button"
+                    onClick={() =>
+                      deleteNotice(item)
+                    }
+                  >
+                    Delete{' '}
+                    <i className="bi bi-trash" />
+                  </button>
+                </div>
+              </footer>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="No notices found"
+          description="No notices returned from Laravel."
+        />
+      )}
+
+      <FormModal
+        open={formOpen}
+        title={
+          editing
+            ? 'Edit Notice'
+            : 'Publish Notice'
+        }
+        onClose={closeForm}
+      >
+        <form
+          onSubmit={submitNotice}
+        >
+          {formError && (
+            <div className="manager-form-error">
+              {formError}
+            </div>
+          )}
+
+          <Field
+            label="Title"
+            required
+          >
+            <input
+              type="text"
+              value={values.title}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  title:
+                    event.target.value,
+                })
+              }
+              placeholder="Notice title"
+            />
+          </Field>
+
+          <Field
+            label="Content"
+            required
+          >
+            <textarea
+              rows={7}
+              value={values.content}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  content:
+                    event.target.value,
+                })
+              }
+              placeholder="Write your notice..."
+            />
+          </Field>
+
+          <FormActions
+            submitting={submitting}
+            onCancel={closeForm}
+            submitLabel={
+              editing
+                ? 'Update Notice'
+                : 'Publish Notice'
+            }
+          />
+        </form>
+      </FormModal>
+
+      {submitting && (
+        <div className="manager-loading">
+          Saving notice...
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reports                                                                    */
+/* -------------------------------------------------------------------------- */
 
 export function ReportsSection() {
-  const [feedback, setFeedback] = useState('');
-  return <div className="manager-section"><ManagerSectionHeader eyebrow="Insights" title="Reports" description="Generate focused operational summaries for your portfolio." /><Feedback message={feedback} />{reports.length ? <div className="manager-report-grid">{reports.map((item) => <article className="manager-report-card" key={item.id}><span className="manager-report-card__icon"><i className={`bi ${item.icon}`} /></span><h2>{item.title}</h2><p>{item.description}</p><label><span>Date range</span><select defaultValue={item.range ?? ''} aria-label={`${item.title} date range`}><option value="">Not available</option></select></label><button type="button" onClick={() => setFeedback(actionMessage(`Generate ${item.title}`))}>Generate report <i className="bi bi-arrow-up-right" /></button></article>)}</div> : <EmptyState title="No reports available" description="Reports can be generated after verified portfolio data is connected." />}</div>;
+  const [feedback, setFeedback] =
+    useState('');
+
+  return (
+    <div className="manager-section">
+      <ManagerSectionHeader
+        eyebrow="Insights"
+        title="Reports"
+        description="Generate operational summaries for your portfolio."
+      />
+
+      <Feedback message={feedback} />
+
+      {reports.length ? (
+        <div className="manager-report-grid">
+          {reports.map((item) => (
+            <article
+              className="manager-report-card"
+              key={item.id}
+            >
+              <span className="manager-report-card__icon">
+                <i
+                  className={`bi ${item.icon}`}
+                />
+              </span>
+
+              <h2>{item.title}</h2>
+
+              <p>
+                {item.description}
+              </p>
+
+              <label>
+                <span>Date range</span>
+
+                <select
+                  defaultValue={
+                    item.range ?? ''
+                  }
+                  aria-label={`${item.title} date range`}
+                >
+                  <option value="">
+                    Not available
+                  </option>
+                </select>
+              </label>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setFeedback(
+                    `${item.title} is ready for backend integration.`
+                  )
+                }
+              >
+                Generate report{' '}
+                <i className="bi bi-arrow-up-right" />
+              </button>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="No reports available"
+          description="Reports can be generated after verified portfolio data is connected."
+        />
+      )}
+    </div>
+  );
 }
 
-function DataTable({ headers, children }: { headers: readonly string[]; children: React.ReactNode }) {
-  return <div className="manager-panel manager-data-panel"><div className="table-responsive manager-table-wrap"><table className="table manager-table align-middle mb-0"><thead><tr>{headers.map((header) => <th key={header} scope="col">{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div></div>;
-}
+/* -------------------------------------------------------------------------- */
+/* Shared DataTable                                                           */
+/* -------------------------------------------------------------------------- */
 
-function SummaryStrip({ items }: { items: readonly (readonly [string, string | null, string])[] }) {
-  return <div className="manager-summary-strip">{items.map(([label, value, icon]) => <article key={label}><span><i className={`bi ${icon}`} /></span><div><small>{label}</small><strong>{value ?? '—'}</strong></div></article>)}</div>;
+function DataTable({
+  headers,
+  children,
+}: {
+  headers: readonly string[];
+  children: ReactNode;
+}) {
+  return (
+    <div className="manager-panel manager-data-panel">
+      <div className="table-responsive manager-table-wrap">
+        <table className="table manager-table align-middle mb-0">
+          <thead>
+            <tr>
+              {headers.map(
+                (header, index) => (
+                  <th
+                    key={`${header}-${index}`}
+                    scope="col"
+                  >
+                    {header}
+                  </th>
+                )
+              )}
+            </tr>
+          </thead>
+
+          <tbody>
+            {children}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
