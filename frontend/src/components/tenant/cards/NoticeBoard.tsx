@@ -1,7 +1,18 @@
 import { Link } from "react-router-dom";
-import { tenantNotices } from "../../../data/tenantDashboardData";
 
-function NoticeBoard() {
+interface TenantNotice {
+  id: number;
+  title: string;
+  preview: string;
+  date: string;
+  icon: string;
+}
+
+interface NoticeBoardProps {
+  notices?: TenantNotice[];
+}
+
+function NoticeBoard({ notices = [] }: NoticeBoardProps) {
   return (
     <div className="dashboard-card notice-card">
       <div className="card-header-custom">
@@ -10,19 +21,28 @@ function NoticeBoard() {
       </div>
 
       <div className="notice-list">
-        {tenantNotices.map((notice) => (
-          <div key={notice.id} className="notice-item">
-            <div className="notice-text">
-              <strong>{notice.title}</strong>
-              <small>{notice.preview}</small>
-            </div>
+        {notices.length > 0 ? (
+          notices.map((notice) => (
+            <div key={notice.id} className="notice-item">
+              <div className="notice-text">
+                <strong>{notice.title}</strong>
+                <small>{notice.preview}</small>
+              </div>
 
-            <div className="notice-tag">
-              <i className={`bi ${notice.icon}`}></i>
-              <span>{notice.date}</span>
+              <div className="notice-tag">
+                <i className={`bi ${notice.icon}`}></i>
+                <span>{notice.date}</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="notice-item">
+            <div className="notice-text">
+              <strong>No notices yet</strong>
+              <small>New notices will appear here.</small>
             </div>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
