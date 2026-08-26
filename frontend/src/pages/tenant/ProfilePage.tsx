@@ -1,23 +1,67 @@
-import { useState } from 'react';
-import './Tenant.css';
+import { useState } from "react";
+import "./Tenant.css";
 
-const accountPreferences = [
-  { label: 'Email notifications', value: true },
-  { label: 'Notice notifications', value: true },
-  { label: 'Payment reminders', value: true },
-  { label: 'Maintenance updates', value: false },
+type PreferenceItem = {
+  label: string;
+  value: boolean;
+};
+
+interface TenantProfileData {
+  fullName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  dateOfBirth?: string | null;
+  address?: string | null;
+  tenantId?: string | null;
+  building?: string | null;
+  unit?: string | null;
+  leaseStatus?: string | null;
+  moveInDate?: string | null;
+  twoStepEnabled?: boolean | null;
+  lastPasswordChange?: string | null;
+}
+
+interface ProfilePageProps {
+  profile?: TenantProfileData | null;
+}
+
+const defaultPreferences: PreferenceItem[] = [
+  { label: "Email notifications", value: true },
+  { label: "Notice notifications", value: true },
+  { label: "Payment reminders", value: true },
+  { label: "Maintenance updates", value: false },
 ];
 
-function ProfilePage() {
-  const [preferences, setPreferences] = useState(accountPreferences);
+function ProfilePage({ profile = null }: ProfilePageProps) {
+  const [preferences, setPreferences] =
+    useState<PreferenceItem[]>(defaultPreferences);
 
   const togglePreference = (index: number) => {
     setPreferences((current) =>
       current.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, value: !item.value } : item,
-      ),
+        itemIndex === index ? { ...item, value: !item.value } : item
+      )
     );
   };
+
+  const displayName = profile?.fullName || "Tenant";
+
+  const initials = profile?.fullName
+    ? profile.fullName
+        .split(" ")
+        .filter(Boolean)
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "T";
+
+  const residencyText =
+    profile?.building || profile?.unit
+      ? `Tenant${
+          profile?.building ? ` • Resident at ${profile.building}` : ""
+        }`
+      : "Tenant";
 
   return (
     <main className="page-dark">
@@ -25,28 +69,37 @@ function ProfilePage() {
         <section className="tenant-panel tenant-panel--profile-header">
           <div className="tenant-profile-card">
             <div className="tenant-profile-card__identity">
-              <div className="tenant-avatar tenant-avatar--xl">LN</div>
+              <div className="tenant-avatar tenant-avatar--xl">
+                {initials}
+              </div>
+
               <div>
                 <span className="tenant-panel__eyebrow">Account</span>
-                <h3>Lutfa Nahid</h3>
-                <p>Tenant • Resident at Aurora Heights</p>
+                <h3>{displayName}</h3>
+                <p>{residencyText}</p>
               </div>
             </div>
 
             <div className="tenant-profile-card__meta">
               <div>
                 <small>Email</small>
-                <strong>lutfa.nahid@email.com</strong>
+                <strong>{profile?.email || "No data yet"}</strong>
               </div>
+
               <div>
                 <small>Phone</small>
-                <strong>+880 1712-345678</strong>
+                <strong>{profile?.phone || "No data yet"}</strong>
               </div>
+
               <div>
                 <small>Apartment</small>
-                <strong>Flat B-406</strong>
+                <strong>{profile?.unit || "No apartment assigned"}</strong>
               </div>
-              <button type="button" className="btn btn-secondary btn-secondary--compact">
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-secondary--compact"
+              >
                 Edit Profile
               </button>
             </div>
@@ -65,23 +118,27 @@ function ProfilePage() {
             <div className="tenant-profile-detail-list">
               <div>
                 <span>Full name</span>
-                <strong>Lutfa Nahid</strong>
+                <strong>{profile?.fullName || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Email</span>
-                <strong>lutfa.nahid@email.com</strong>
+                <strong>{profile?.email || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Phone</span>
-                <strong>+880 1712-345678</strong>
+                <strong>{profile?.phone || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Date of birth</span>
-                <strong>May 17, 1994</strong>
+                <strong>{profile?.dateOfBirth || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Address</span>
-                <strong>House 12, Road 4, Dhanmondi, Dhaka</strong>
+                <strong>{profile?.address || "No data yet"}</strong>
               </div>
             </div>
           </section>
@@ -97,23 +154,27 @@ function ProfilePage() {
             <div className="tenant-profile-detail-list">
               <div>
                 <span>Tenant ID</span>
-                <strong>REN-2026-0147</strong>
+                <strong>{profile?.tenantId || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Building</span>
-                <strong>Aurora Heights</strong>
+                <strong>{profile?.building || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Unit</span>
-                <strong>Flat B-406</strong>
+                <strong>{profile?.unit || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Lease status</span>
-                <strong>Active</strong>
+                <strong>{profile?.leaseStatus || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Move-in date</span>
-                <strong>Jan 12, 2026</strong>
+                <strong>{profile?.moveInDate || "No data yet"}</strong>
               </div>
             </div>
           </section>
@@ -130,16 +191,32 @@ function ProfilePage() {
 
             <div className="tenant-security-list">
               <button type="button" className="tenant-quick-action">
-                <span><i className="bi bi-shield-lock" aria-hidden="true" /> Change Password</span>
-                <i className="bi bi-arrow-right-short" aria-hidden="true" />
+                <span>
+                  <i className="bi bi-shield-lock" aria-hidden="true" /> Change
+                  Password
+                </span>
+                <i
+                  className="bi bi-arrow-right-short"
+                  aria-hidden="true"
+                />
               </button>
+
               <div className="tenant-security-status">
                 <span>Two-step verification</span>
-                <strong>Enabled</strong>
+                <strong>
+                  {typeof profile?.twoStepEnabled === "boolean"
+                    ? profile.twoStepEnabled
+                      ? "Enabled"
+                      : "Disabled"
+                    : "No data yet"}
+                </strong>
               </div>
+
               <div className="tenant-security-status">
                 <span>Last password change</span>
-                <strong>May 08, 2026</strong>
+                <strong>
+                  {profile?.lastPasswordChange || "No data yet"}
+                </strong>
               </div>
             </div>
           </section>
@@ -156,9 +233,12 @@ function ProfilePage() {
               {preferences.map((item, index) => (
                 <label key={item.label} className="tenant-toggle-row">
                   <span>{item.label}</span>
+
                   <button
                     type="button"
-                    className={`tenant-toggle ${item.value ? 'active' : ''}`}
+                    className={`tenant-toggle ${
+                      item.value ? "active" : ""
+                    }`}
                     aria-pressed={item.value}
                     onClick={() => togglePreference(index)}
                   >

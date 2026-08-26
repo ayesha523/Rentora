@@ -1,86 +1,109 @@
-import './Tenant.css';
+import "./Tenant.css";
 
-const apartmentDetails = [
-  { label: 'Bedrooms', value: '2 Bedroom' },
-  { label: 'Bathrooms', value: '2' },
-  { label: 'Floor', value: '4th Floor' },
-  { label: 'Approx. Size', value: '1,260 sq ft' },
-  { label: 'Unit Type', value: 'Premium Apartment' },
-  { label: 'Furnishing', value: 'Semi-furnished' },
-];
+interface ApartmentInfo {
+  propertyName?: string | null;
+  block?: string | null;
+  flat?: string | null;
+  tenantName?: string | null;
+  occupancy?: string | null;
+  leaseStatus?: string | null;
+  monthlyRent?: string | null;
+  apartmentDetails?: Array<{
+    label: string;
+    value: string;
+  }>;
+  leaseDetails?: Array<{
+    label: string;
+    value: string;
+  }>;
+  amenities?: string[];
+  management?: {
+    name?: string | null;
+    office?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+  } | null;
+}
 
-const leaseDetails = [
-  { label: 'Lease Start', value: 'Jan 12, 2026' },
-  { label: 'Lease Expiration', value: 'Jan 11, 2028' },
-  { label: 'Monthly Rent', value: '৳20,000' },
-  { label: 'Security Deposit', value: '৳40,000' },
-  { label: 'Remaining Term', value: '14 months' },
-];
+interface ApartmentPageProps {
+  apartment?: ApartmentInfo | null;
+}
 
-const amenities = [
-  'Parking',
-  'Security',
-  'Elevator',
-  'Generator',
-  'Water Supply',
-  'Internet',
-  'Housekeeping',
-  'Guest Access',
-];
+function ApartmentPage({ apartment = null }: ApartmentPageProps) {
+  const hasApartment = Boolean(apartment);
 
-function ApartmentPage() {
+  const apartmentDetails = apartment?.apartmentDetails ?? [];
+  const leaseDetails = apartment?.leaseDetails ?? [];
+  const amenities = apartment?.amenities ?? [];
+  const management = apartment?.management;
+
   return (
     <main className="page-dark">
       <div className="tenant-page-shell">
         <section className="tenant-page-hero tenant-property-hero">
           <div className="tenant-property-hero__visual">
             <div className="tenant-property-visual">
-              <div className="tenant-property-visual__badge">Aurora Heights</div>
+              <div className="tenant-property-visual__badge">
+                {apartment?.propertyName || "No apartment assigned"}
+              </div>
+
               <div className="tenant-property-visual__icon-wrap">
                 <i className="bi bi-building" aria-hidden="true" />
               </div>
+
               <div className="tenant-property-visual__meta">
-                <span>Block B</span>
-                <span>Flat B-406</span>
+                <span>{apartment?.block || "No block data"}</span>
+                <span>{apartment?.flat || "No flat data"}</span>
               </div>
             </div>
           </div>
 
           <div className="tenant-property-hero__content">
             <div className="tenant-detail-kicker">Apartment Overview</div>
-            <h2 className="tenant-page-title">Flat B-406</h2>
+
+            <h2 className="tenant-page-title">
+              {apartment?.flat || "No apartment assigned"}
+            </h2>
+
             <div className="tenant-property-line">
               <span className="tenant-property-line__label">Property</span>
-              <strong>Aurora Heights Residences</strong>
+              <strong>
+                {apartment?.propertyName || "No property information available"}
+              </strong>
             </div>
 
             <div className="tenant-property-meta-grid">
               <div>
                 <span>Tenant</span>
-                <strong>Lutfa Nahid</strong>
+                <strong>{apartment?.tenantName || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Occupancy</span>
-                <strong>Occupied</strong>
+                <strong>{apartment?.occupancy || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Lease Status</span>
-                <strong>Active</strong>
+                <strong>{apartment?.leaseStatus || "No data yet"}</strong>
               </div>
+
               <div>
                 <span>Monthly Rent</span>
-                <strong>৳20,000</strong>
+                <strong>{apartment?.monthlyRent || "No data yet"}</strong>
               </div>
             </div>
 
             <div className="tenant-property-status-row">
-              <span className="status-badge status-badge--success">
-                <i className="bi bi-check-circle-fill" aria-hidden="true" />
-                Occupied
+              <span className="status-badge">
+                <i className="bi bi-building" aria-hidden="true" />
+                {hasApartment ? apartment?.occupancy || "No status" : "No apartment assigned"}
               </span>
+
               <span className="status-badge status-badge--info">
                 <i className="bi bi-calendar3" aria-hidden="true" />
-                Lease active
+                {apartment?.leaseStatus || "No lease information"}
               </span>
             </div>
           </div>
@@ -96,12 +119,19 @@ function ApartmentPage() {
             </div>
 
             <div className="tenant-info-grid">
-              {apartmentDetails.map((item) => (
-                <div key={item.label} className="tenant-info-card">
-                  <small>{item.label}</small>
-                  <strong>{item.value}</strong>
+              {apartmentDetails.length > 0 ? (
+                apartmentDetails.map((item) => (
+                  <div key={item.label} className="tenant-info-card">
+                    <small>{item.label}</small>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))
+              ) : (
+                <div className="tenant-info-card">
+                  <small>Apartment Details</small>
+                  <strong>No apartment details available</strong>
                 </div>
-              ))}
+              )}
             </div>
           </section>
 
@@ -115,33 +145,59 @@ function ApartmentPage() {
 
             <div className="tenant-contact-card">
               <div className="tenant-contact-card__header">
-                <div className="tenant-avatar tenant-avatar--lg">LN</div>
+                <div className="tenant-avatar tenant-avatar--lg">
+                  <i className="bi bi-building" aria-hidden="true" />
+                </div>
+
                 <div>
-                  <strong>Rentora Management</strong>
-                  <span>Property Office</span>
+                  <strong>
+                    {management?.name || "No management contact available"}
+                  </strong>
+                  <span>{management?.office || "No office information"}</span>
                 </div>
               </div>
 
-              <ul className="tenant-contact-list">
-                <li>
-                  <i className="bi bi-telephone" aria-hidden="true" />
-                  +880 1700-000000
-                </li>
-                <li>
-                  <i className="bi bi-envelope" aria-hidden="true" />
-                  support@rentora.com
-                </li>
-                <li>
-                  <i className="bi bi-geo-alt" aria-hidden="true" />
-                  Block B, Aurora Heights
-                </li>
-              </ul>
+              {management ? (
+                <ul className="tenant-contact-list">
+                  {management.phone && (
+                    <li>
+                      <i className="bi bi-telephone" aria-hidden="true" />
+                      {management.phone}
+                    </li>
+                  )}
+
+                  {management.email && (
+                    <li>
+                      <i className="bi bi-envelope" aria-hidden="true" />
+                      {management.email}
+                    </li>
+                  )}
+
+                  {management.address && (
+                    <li>
+                      <i className="bi bi-geo-alt" aria-hidden="true" />
+                      {management.address}
+                    </li>
+                  )}
+                </ul>
+              ) : (
+                <p>No contact information available.</p>
+              )}
 
               <div className="tenant-actions-row">
-                <button type="button" className="btn btn-rentora btn-rentora--compact">
+                <button
+                  type="button"
+                  className="btn btn-rentora btn-rentora--compact"
+                  disabled={!hasApartment}
+                >
                   View Lease
                 </button>
-                <button type="button" className="btn btn-secondary btn-secondary--compact">
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-secondary--compact"
+                  disabled={!management}
+                >
                   Contact Management
                 </button>
               </div>
@@ -159,12 +215,19 @@ function ApartmentPage() {
             </div>
 
             <div className="tenant-info-grid tenant-info-grid--compact">
-              {leaseDetails.map((item) => (
-                <div key={item.label} className="tenant-info-card">
-                  <small>{item.label}</small>
-                  <strong>{item.value}</strong>
+              {leaseDetails.length > 0 ? (
+                leaseDetails.map((item) => (
+                  <div key={item.label} className="tenant-info-card">
+                    <small>{item.label}</small>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))
+              ) : (
+                <div className="tenant-info-card">
+                  <small>Lease Information</small>
+                  <strong>No lease information available</strong>
                 </div>
-              ))}
+              )}
             </div>
           </section>
 
@@ -177,12 +240,21 @@ function ApartmentPage() {
             </div>
 
             <div className="tenant-amenity-list">
-              {amenities.map((amenity) => (
-                <span key={amenity} className="tenant-amenity-chip">
-                  <i className="bi bi-check-circle-fill" aria-hidden="true" />
-                  {amenity}
+              {amenities.length > 0 ? (
+                amenities.map((amenity) => (
+                  <span key={amenity} className="tenant-amenity-chip">
+                    <i
+                      className="bi bi-check-circle-fill"
+                      aria-hidden="true"
+                    />
+                    {amenity}
+                  </span>
+                ))
+              ) : (
+                <span className="tenant-amenity-chip">
+                  No amenities information available
                 </span>
-              ))}
+              )}
             </div>
           </section>
         </div>

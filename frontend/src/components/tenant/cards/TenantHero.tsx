@@ -1,7 +1,18 @@
 import { Link } from "react-router-dom";
-import { tenantProfile } from "../../../data/tenantDashboardData";
 
-function TenantHero() {
+interface TenantHeroProps {
+  firstName?: string | null;
+  nextRentDue?: string | null;
+  activeComplaints?: string | null;
+  apartmentName?: string | null;
+}
+
+function TenantHero({
+  firstName,
+  nextRentDue,
+  activeComplaints,
+  apartmentName,
+}: TenantHeroProps) {
   const today = new Intl.DateTimeFormat("en-US", {
     weekday: "short",
     month: "short",
@@ -15,10 +26,11 @@ function TenantHero() {
         <div className="tenant-hero__top">
           <div>
             <span className="tenant-hero__eyebrow">Tenant Portal</span>
+
             <div className="tenant-hero__greeting">
               <p>Good Morning,</p>
               <h1>
-                <span>{tenantProfile.firstName}</span> 👋
+                <span>{firstName || "Tenant"}</span> 👋
               </h1>
             </div>
           </div>
@@ -27,6 +39,7 @@ function TenantHero() {
             <span className="tenant-hero__month-icon">
               <i className="bi bi-calendar3"></i>
             </span>
+
             <div>
               <small>Today</small>
               <strong>{today}</strong>
@@ -37,11 +50,12 @@ function TenantHero() {
         <div className="tenant-hero__meta">
           <div>
             <span className="tenant-hero__date">Next rent due</span>
-            <strong>Aug 10, 2026 • ৳20,000</strong>
+            <strong>{nextRentDue || "No rent data yet"}</strong>
           </div>
+
           <div>
             <span className="tenant-hero__date">Active complaints</span>
-            <strong>2 in progress</strong>
+            <strong>{activeComplaints || "No active complaints"}</strong>
           </div>
         </div>
 
@@ -66,7 +80,7 @@ function TenantHero() {
       <div className="tenant-hero__image">
         <div className="tenant-hero__image-placeholder">
           <i className="bi bi-building"></i>
-          <span>Aurora Heights</span>
+          <span>{apartmentName || "No apartment assigned"}</span>
         </div>
       </div>
     </section>

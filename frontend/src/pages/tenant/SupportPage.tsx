@@ -152,9 +152,9 @@ function SupportPage() {
 
           <div className="tenant-support-hero__side">
             <div className="tenant-support-hero__metric">
-              <span>Average response</span>
-              <strong>Within 24 hours</strong>
-            </div>
+  <span>Average response</span>
+  <strong>No data yet</strong>
+</div>
             <div className="tenant-support-hero__metric">
               <span>Resident help</span>
               <strong>Available online</strong>
