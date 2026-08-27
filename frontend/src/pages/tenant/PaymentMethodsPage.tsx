@@ -13,9 +13,9 @@ import {
 } from "react";
 
 import {
+  createSetupIntent,
   deletePaymentMethod,
   getPaymentMethods,
-  savePaymentMethod,
   setDefaultPaymentMethod,
   type SavedPaymentMethod,
 } from "../../services/paymentMethodsApi";
@@ -60,59 +60,63 @@ function PaymentMethodsContent() {
   }, [loadMethods]);
 
   const handleAddPaymentMethod = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
-    setError("");
-    setSuccess("");
+  event: FormEvent<HTMLFormElement>
+) => {
+  event.preventDefault();
 
-    if (!stripe || !elements) {
-      setError("Stripe is still loading. Please try again.");
-      return;
-    }
+  setError("");
+  setSuccess("");
 
-    const card = elements.getElement(CardElement);
+  if (!stripe || !elements) {
+    setError("Stripe is still loading. Please try again.");
+    return;
+  }
 
-    if (!card) {
-      setError("Card form is not available.");
-      return;
-    }
+  const card = elements.getElement(CardElement);
 
-    setSaving(true);
+  if (!card) {
+    setError("Card form is not available.");
+    return;
+  }
 
-    try {
-      const result = await stripe.createPaymentMethod({
-        type: "card",
+  setSaving(true);
+
+  try {
+    // Create a SetupIntent for the authenticated tenant
+    const clientSecret = await createSetupIntent();
+
+    // Confirm the SetupIntent and attach the card to the Stripe Customer
+    const result = await stripe.confirmCardSetup(clientSecret, {
+      payment_method: {
         card,
-      });
+      },
+    });
 
-      if (result.error) {
-        setError(
-          result.error.message || "Unable to create payment method."
-        );
-        return;
-      }
-
-      if (!result.paymentMethod) {
-        setError("Stripe did not return a payment method.");
-        return;
-      }
-
-      await savePaymentMethod(result.paymentMethod.id);
-
-      card.clear();
-      setAdding(false);
-      setSuccess("Payment method added successfully.");
-
-      await loadMethods();
-    } catch {
+    if (result.error) {
       setError(
-        "The payment method could not be saved because the backend service is not available yet."
+        result.error.message || "Unable to save payment method."
       );
-    } finally {
-      setSaving(false);
+      return;
     }
-  };
+
+    if (result.setupIntent?.status !== "succeeded") {
+      setError("Stripe could not save the payment method.");
+      return;
+    }
+
+    card.clear();
+    setAdding(false);
+    setSuccess("Payment method added successfully.");
+
+    // Reload saved cards from Stripe through Laravel
+    await loadMethods();
+  } catch (error) {
+    console.error(error);
+    setError("The payment method could not be saved. Please try again.");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleDefault = async (id: string) => {
     setError("");

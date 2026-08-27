@@ -10,6 +10,7 @@ use App\Http\Controllers\ManagerUtilityBillController;
 use App\Http\Controllers\ManagerComplaintController;
 use App\Http\Controllers\ManagerMaintenanceRequestController;
 use App\Http\Controllers\ManagerNoticeController;
+use App\Http\Controllers\PaymentMethodController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -25,8 +26,22 @@ Route::get('/test', function () {
         'message' => 'Rentora Backend API Working'
     ]);
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| Google Authentication Routes
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/auth/google', [AuthController::class, 'redirectToGoogle']);
-Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+
+Route::get(
+    '/auth/google/callback',
+    [AuthController::class, 'handleGoogleCallback']
+);
+
+
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes
@@ -34,7 +49,9 @@ Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallbac
 */
 
 Route::post('/register', [AuthController::class, 'register']);
+
 Route::post('/login', [AuthController::class, 'login']);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +64,7 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
 
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])
     ->middleware('throttle:reset-password');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -65,6 +83,61 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/user', [AuthController::class, 'user']);
+
+
+    /*
+|--------------------------------------------------------------------------
+| Tenant Payment Method Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('tenant/payment-methods')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Create Stripe SetupIntent
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post(
+        '/setup-intent',
+        [PaymentMethodController::class, 'createSetupIntent']
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | List saved payment methods
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/',
+        [PaymentMethodController::class, 'index']
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Set default payment method
+    |--------------------------------------------------------------------------
+    */
+
+    Route::patch(
+        '/{paymentMethod}/default',
+        [PaymentMethodController::class, 'setDefault']
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Remove payment method
+    |--------------------------------------------------------------------------
+    */
+
+    Route::delete(
+        '/{paymentMethod}',
+        [PaymentMethodController::class, 'destroy']
+    );
+});
+
 
     /*
     |--------------------------------------------------------------------------
@@ -85,6 +158,7 @@ Route::middleware('auth:sanctum')->group(function () {
             [ManagerDashboardController::class, 'index']
         );
 
+
         /*
         |--------------------------------------------------------------------------
         | Apartment CRUD
@@ -95,6 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
             'manager/apartments',
             ManagerApartmentController::class
         );
+
 
         /*
         |--------------------------------------------------------------------------
@@ -107,6 +182,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ManagerFlatController::class
         )->names('flats');
 
+
         /*
         |--------------------------------------------------------------------------
         | Tenant CRUD
@@ -117,6 +193,7 @@ Route::middleware('auth:sanctum')->group(function () {
             'manager/tenants',
             ManagerTenantController::class
         )->names('tenants');
+
 
         /*
         |--------------------------------------------------------------------------
@@ -131,6 +208,7 @@ Route::middleware('auth:sanctum')->group(function () {
             'rent-payments' => 'rentPayment',
         ]);
 
+
         /*
         |--------------------------------------------------------------------------
         | Utility Bill CRUD
@@ -143,6 +221,7 @@ Route::middleware('auth:sanctum')->group(function () {
         )->parameters([
             'utility-bills' => 'utilityBill',
         ]);
+
 
         /*
         |--------------------------------------------------------------------------
@@ -157,6 +236,7 @@ Route::middleware('auth:sanctum')->group(function () {
             'complaints' => 'complaint',
         ]);
 
+
         /*
         |--------------------------------------------------------------------------
         | Maintenance Request CRUD
@@ -169,6 +249,7 @@ Route::middleware('auth:sanctum')->group(function () {
         )->parameters([
             'maintenance-requests' => 'maintenanceRequest',
         ]);
+
 
         /*
         |--------------------------------------------------------------------------

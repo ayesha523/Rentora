@@ -29,6 +29,7 @@ class User extends Authenticatable implements CanResetPasswordContract
     'avatar',
     'role_id',
     'phone',
+    'stripe_customer_id',
 ];
 
     /**
