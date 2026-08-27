@@ -23,6 +23,7 @@ import NoticesPage from "./pages/tenant/NoticesPage";
 import ProfilePage from "./pages/tenant/ProfilePage";
 import SupportPage from "./pages/tenant/SupportPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import PaymentMethodsPage from "./pages/tenant/PaymentMethodsPage";
 
 function App() {
   return (
@@ -72,10 +73,12 @@ function App() {
 
           <Route path="apartment" element={<ApartmentPage />} />
           <Route path="rent-bills" element={<RentBillsPage />} />
+          <Route path="payment-methods" element={<PaymentMethodsPage />} />
           <Route path="complaints" element={<ComplaintsPage />} />
           <Route path="notices" element={<NoticesPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="support" element={<SupportPage />} />
+          
         </Route>
       </Route>
 
