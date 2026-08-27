@@ -9,8 +9,8 @@ return [
     |
     | This file is for storing the credentials for third party services such
     | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
+    | location for this type of information, allowing packages to have a
+    | conventional file to locate the various service credentials.
     |
     */
 
@@ -34,10 +34,16 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+
     'google' => [
-    'client_id' => env('GOOGLE_CLIENT_ID'),
-    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-    'redirect' => env('GOOGLE_REDIRECT_URI'),
-],
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET_KEY'),
+        'publishable' => env('STRIPE_PUBLISHABLE_KEY'),
+    ],
 
 ];

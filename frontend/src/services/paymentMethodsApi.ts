@@ -13,48 +13,39 @@ const PAYMENT_METHODS_PATH = "/tenant/payment-methods";
 
 interface PaymentMethodsResponse {
   success: boolean;
-  payment_methods?: SavedPaymentMethod[];
   data?: SavedPaymentMethod[];
   message?: string;
 }
 
-interface PaymentMethodResponse {
+interface SetupIntentResponse {
   success: boolean;
-  payment_method?: SavedPaymentMethod;
-  data?: SavedPaymentMethod;
+  data?: {
+    client_secret: string;
+  };
   message?: string;
 }
 
-export async function getPaymentMethods(): Promise<
-  SavedPaymentMethod[]
-> {
-  const response =
-    await apiRequest<PaymentMethodsResponse>(
-      PAYMENT_METHODS_PATH
-    );
+export async function getPaymentMethods(): Promise<SavedPaymentMethod[]> {
+  const response = await apiRequest<PaymentMethodsResponse>(
+    PAYMENT_METHODS_PATH
+  );
 
-  return response.payment_methods ?? response.data ?? [];
+  return response.data ?? [];
 }
 
-export async function savePaymentMethod(
-  paymentMethodId: string
-): Promise<SavedPaymentMethod | null> {
-  const response =
-    await apiRequest<PaymentMethodResponse>(
-      PAYMENT_METHODS_PATH,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          payment_method_id: paymentMethodId,
-        }),
-      }
-    );
-
-  return (
-    response.payment_method ??
-    response.data ??
-    null
+export async function createSetupIntent(): Promise<string> {
+  const response = await apiRequest<SetupIntentResponse>(
+    `${PAYMENT_METHODS_PATH}/setup-intent`,
+    {
+      method: "POST",
+    }
   );
+
+  if (!response.data?.client_secret) {
+    throw new Error("Stripe setup intent was not created.");
+  }
+
+  return response.data.client_secret;
 }
 
 export async function setDefaultPaymentMethod(
