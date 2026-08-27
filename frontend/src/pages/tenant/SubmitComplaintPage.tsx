@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./Tenant.css";
+import { apiRequest } from "../../services/api";
 
 type FormState = {
   subject: string;
@@ -15,6 +16,18 @@ interface SubmitComplaintPageProps {
   expectedResponse?: string | null;
   supportPhone?: string | null;
   supportEmail?: string | null;
+}
+
+interface ComplaintResponse {
+  success: boolean;
+  message: string;
+  complaint?: {
+    id: number;
+    tenant_id: number;
+    title: string;
+    description: string;
+    status: string;
+  };
 }
 
 function SubmitComplaintPage({
@@ -37,14 +50,19 @@ function SubmitComplaintPage({
   >({});
 
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
     setIsSubmitted(false);
+    setSubmitError(null);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
 
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
@@ -68,8 +86,50 @@ function SubmitComplaintPage({
       return;
     }
 
-    setErrors({});
-    setIsSubmitted(true);
+    try {
+      setErrors({});
+      setSubmitError(null);
+      setIsSubmitted(false);
+      setIsSubmitting(true);
+
+      const response = await apiRequest<ComplaintResponse>(
+        "/tenant/complaints",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            title: form.subject.trim(),
+            description: form.description.trim(),
+          }),
+        }
+      );
+
+      if (response.success) {
+        setIsSubmitted(true);
+
+        setForm({
+          subject: "",
+          category: "Maintenance",
+          priority: "Normal",
+          description: "",
+          unit: unit || "",
+          contactMethod: "Email",
+        });
+      } else {
+        setSubmitError(
+          response.message || "Failed to submit complaint."
+        );
+      }
+    } catch (error: any) {
+      console.error("Complaint submission error:", error);
+
+      const message =
+        error?.data?.message ||
+        "Unable to submit complaint. Please try again.";
+
+      setSubmitError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -79,12 +139,18 @@ function SubmitComplaintPage({
           <section className="tenant-panel tenant-panel--form">
             <div className="tenant-panel__header">
               <div>
-                <span className="tenant-panel__eyebrow">Report Issue</span>
+                <span className="tenant-panel__eyebrow">
+                  Report Issue
+                </span>
                 <h3>Submit Complaint</h3>
               </div>
             </div>
 
-            <form className="tenant-form" onSubmit={handleSubmit} noValidate>
+            <form
+              className="tenant-form"
+              onSubmit={handleSubmit}
+              noValidate
+            >
               <div className="tenant-form__grid">
                 <label className="tenant-field">
                   <span>Complaint subject</span>
@@ -200,12 +266,18 @@ function SubmitComplaintPage({
               <div className="tenant-upload-box">
                 <div className="tenant-upload-box__content">
                   <div className="tenant-upload-box__icon">
-                    <i className="bi bi-cloud-upload" aria-hidden="true" />
+                    <i
+                      className="bi bi-cloud-upload"
+                      aria-hidden="true"
+                    />
                   </div>
 
                   <div>
                     <strong>Upload photos or documents</strong>
-                    <p>Drag and drop files here or browse from your device.</p>
+                    <p>
+                      Drag and drop files here or browse from your
+                      device.
+                    </p>
                   </div>
                 </div>
 
@@ -217,8 +289,8 @@ function SubmitComplaintPage({
               </div>
 
               <div className="tenant-form__help">
-                Please include the exact location, frequency, and any safety
-                concerns so the team can respond quickly.
+                Please include the exact location, frequency, and any
+                safety concerns so the team can respond quickly.
               </div>
 
               {isSubmitted && (
@@ -227,8 +299,22 @@ function SubmitComplaintPage({
                     className="bi bi-check-circle-fill"
                     aria-hidden="true"
                   />
-                  Complaint submitted successfully. The management team will
-                  review it shortly.
+
+                  <span>
+                    <strong>Complaint submitted successfully.</strong>{" "}
+                    The management team will review it shortly.
+                  </span>
+                </div>
+              )}
+
+              {submitError && (
+                <div className="tenant-error-banner">
+                  <i
+                    className="bi bi-exclamation-circle-fill"
+                    aria-hidden="true"
+                  />
+
+                  <span>{submitError}</span>
                 </div>
               )}
 
@@ -236,6 +322,7 @@ function SubmitComplaintPage({
                 <button
                   type="button"
                   className="btn btn-secondary btn-secondary--compact"
+                  disabled={isSubmitting}
                 >
                   Save Draft
                 </button>
@@ -243,8 +330,19 @@ function SubmitComplaintPage({
                 <button
                   type="submit"
                   className="btn btn-rentora btn-rentora--compact"
+                  disabled={isSubmitting}
                 >
-                  Submit Complaint
+                  {isSubmitting ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        aria-hidden="true"
+                      />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Complaint"
+                  )}
                 </button>
               </div>
             </form>
@@ -253,7 +351,9 @@ function SubmitComplaintPage({
           <aside className="tenant-panel tenant-panel--support">
             <div className="tenant-panel__header">
               <div>
-                <span className="tenant-panel__eyebrow">Support</span>
+                <span className="tenant-panel__eyebrow">
+                  Support
+                </span>
                 <h3>Need urgent help?</h3>
               </div>
             </div>
@@ -263,8 +363,10 @@ function SubmitComplaintPage({
                 <span className="tenant-support-card__label">
                   Expected response
                 </span>
+
                 <strong>
-                  {expectedResponse || "No response-time information available"}
+                  {expectedResponse ||
+                    "No response-time information available"}
                 </strong>
               </div>
 
@@ -272,14 +374,17 @@ function SubmitComplaintPage({
                 <span className="tenant-support-card__label">
                   Emergency guidance
                 </span>
+
                 <strong>
-                  For urgent safety issues, contact property management or the
-                  appropriate emergency service.
+                  For urgent safety issues, contact property management
+                  or the appropriate emergency service.
                 </strong>
               </div>
 
               <div className="tenant-support-card__block">
-                <span className="tenant-support-card__label">Contact</span>
+                <span className="tenant-support-card__label">
+                  Contact
+                </span>
 
                 {supportPhone || supportEmail ? (
                   <>

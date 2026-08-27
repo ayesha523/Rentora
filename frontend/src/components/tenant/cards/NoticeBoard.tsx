@@ -12,25 +12,37 @@ interface NoticeBoardProps {
   notices?: TenantNotice[];
 }
 
-function NoticeBoard({ notices = [] }: NoticeBoardProps) {
+function NoticeBoard({
+  notices = [],
+}: NoticeBoardProps) {
   return (
     <div className="dashboard-card notice-card">
       <div className="card-header-custom">
         <h5>Notice Board</h5>
-        <Link to="/tenant/notices">View All</Link>
+
+        <Link to="/tenant/notices">
+          View All
+        </Link>
       </div>
 
       <div className="notice-list">
         {notices.length > 0 ? (
           notices.map((notice) => (
-            <div key={notice.id} className="notice-item">
+            <div
+              key={notice.id}
+              className="notice-item"
+            >
               <div className="notice-text">
                 <strong>{notice.title}</strong>
-                <small>{notice.preview}</small>
+
+                <small>
+                  {notice.preview}
+                </small>
               </div>
 
               <div className="notice-tag">
                 <i className={`bi ${notice.icon}`}></i>
+
                 <span>{notice.date}</span>
               </div>
             </div>
@@ -39,7 +51,10 @@ function NoticeBoard({ notices = [] }: NoticeBoardProps) {
           <div className="notice-item">
             <div className="notice-text">
               <strong>No notices yet</strong>
-              <small>New notices will appear here.</small>
+
+              <small>
+                New notices will appear here.
+              </small>
             </div>
           </div>
         )}

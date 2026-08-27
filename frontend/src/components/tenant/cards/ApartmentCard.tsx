@@ -23,25 +23,32 @@ function ApartmentCard({
     <aside className="tenant-apartment-card">
       <div className="tenant-card-header">
         <div>
-          <span className="tenant-card-label">My Apartment</span>
+          <span className="tenant-card-label">
+            My Apartment
+          </span>
 
           <h2>{name || "No apartment assigned"}</h2>
 
           <p>
             {hasApartment
-              ? [block, flat].filter(Boolean).join(" • ")
+              ? [block, flat]
+                  .filter(Boolean)
+                  .join(" • ")
               : "Apartment details will appear here"}
           </p>
         </div>
 
-        <Link to="/tenant/apartment" className="tenant-card-link">
+        <Link
+          to="/tenant/apartment"
+          className="tenant-card-link"
+        >
           View Details →
         </Link>
       </div>
 
       <div className="tenant-apartment-image">
         <div className="tenant-apartment-image__placeholder">
-          Apartment Image
+          <i className="bi bi-building"></i>
         </div>
       </div>
 

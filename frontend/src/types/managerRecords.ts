@@ -104,6 +104,19 @@ export type TenantFormValues = {
 /* Rent Payments                                                               */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Calculated payment status used by the frontend payment-status utility.
+ */
+export type PaymentStatus =
+  | 'paid'
+  | 'pending'
+  | 'overdue'
+  | 'partially_paid'
+  | 'partially_paid_overdue';
+
+/**
+ * Status stored in the rent_payments database table.
+ */
 export type RentPaymentStatus = 'paid' | 'pending';
 
 export interface RentPayment {
@@ -273,4 +286,3 @@ export interface MutationState {
   successMessage?: string | null;
   apiError?: string | null;
 }
-

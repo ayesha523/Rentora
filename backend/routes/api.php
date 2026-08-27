@@ -11,6 +11,7 @@ use App\Http\Controllers\ManagerComplaintController;
 use App\Http\Controllers\ManagerMaintenanceRequestController;
 use App\Http\Controllers\ManagerNoticeController;
 use App\Http\Controllers\PaymentMethodController;
+use App\Http\Controllers\TenantDashboardController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -23,7 +24,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/test', function () {
     return response()->json([
         'success' => true,
-        'message' => 'Rentora Backend API Working'
+        'message' => 'Rentora Backend API Working',
     ]);
 });
 
@@ -34,12 +35,15 @@ Route::get('/test', function () {
 |--------------------------------------------------------------------------
 */
 
-Route::get('/auth/google', [AuthController::class, 'redirectToGoogle']);
+Route::get('/auth/google', [
+    AuthController::class,
+    'redirectToGoogle',
+]);
 
-Route::get(
-    '/auth/google/callback',
-    [AuthController::class, 'handleGoogleCallback']
-);
+Route::get('/auth/google/callback', [
+    AuthController::class,
+    'handleGoogleCallback',
+]);
 
 
 /*
@@ -48,9 +52,15 @@ Route::get(
 |--------------------------------------------------------------------------
 */
 
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [
+    AuthController::class,
+    'register',
+]);
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [
+    AuthController::class,
+    'login',
+]);
 
 
 /*
@@ -59,11 +69,15 @@ Route::post('/login', [AuthController::class, 'login']);
 |--------------------------------------------------------------------------
 */
 
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
-    ->middleware('throttle:forgot-password');
+Route::post('/forgot-password', [
+    AuthController::class,
+    'forgotPassword',
+])->middleware('throttle:forgot-password');
 
-Route::post('/reset-password', [AuthController::class, 'resetPassword'])
-    ->middleware('throttle:reset-password');
+Route::post('/reset-password', [
+    AuthController::class,
+    'resetPassword',
+])->middleware('throttle:reset-password');
 
 
 /*
@@ -80,63 +94,136 @@ Route::middleware('auth:sanctum')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout', [
+        AuthController::class,
+        'logout',
+    ]);
 
-    Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/user', [
+        AuthController::class,
+        'user',
+    ]);
 
-
-    /*
-|--------------------------------------------------------------------------
-| Tenant Payment Method Routes
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('tenant/payment-methods')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Create Stripe SetupIntent
+    | Tenant Payment Method Routes
     |--------------------------------------------------------------------------
     */
 
-    Route::post(
-        '/setup-intent',
-        [PaymentMethodController::class, 'createSetupIntent']
-    );
+    Route::prefix('tenant/payment-methods')->group(function () {
+
+        /*
+        | Create Stripe SetupIntent
+        */
+
+        Route::post('/setup-intent', [
+            PaymentMethodController::class,
+            'createSetupIntent',
+        ]);
+
+        /*
+        | List saved payment methods
+        */
+
+        Route::get('/', [
+            PaymentMethodController::class,
+            'index',
+        ]);
+
+        /*
+        | Set default payment method
+        */
+
+        Route::patch('/{paymentMethod}/default', [
+            PaymentMethodController::class,
+            'setDefault',
+        ]);
+
+        /*
+        | Remove payment method
+        */
+
+        Route::delete('/{paymentMethod}', [
+            PaymentMethodController::class,
+            'destroy',
+        ]);
+    });
+
 
     /*
     |--------------------------------------------------------------------------
-    | List saved payment methods
+    | Tenant Routes
     |--------------------------------------------------------------------------
+    |
+    | These routes require:
+    |
+    | 1. A valid Sanctum authentication token
+    | 2. The authenticated user to have the tenant role
+    |
     */
 
-    Route::get(
-        '/',
-        [PaymentMethodController::class, 'index']
-    );
+    Route::middleware('tenant')
+        ->prefix('tenant')
+        ->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Set default payment method
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | Tenant Dashboard
+            |--------------------------------------------------------------------------
+            */
 
-    Route::patch(
-        '/{paymentMethod}/default',
-        [PaymentMethodController::class, 'setDefault']
-    );
+            Route::get('/dashboard', [
+                TenantDashboardController::class,
+                'index',
+            ]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Remove payment method
-    |--------------------------------------------------------------------------
-    */
 
-    Route::delete(
-        '/{paymentMethod}',
-        [PaymentMethodController::class, 'destroy']
-    );
-});
+            /*
+            |--------------------------------------------------------------------------
+            | Tenant Profile
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/profile', [
+                TenantDashboardController::class,
+                'profile',
+            ]);
+
+            Route::patch('/profile', [
+                TenantDashboardController::class,
+                'updateProfile',
+            ]);
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Tenant Complaints
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/complaints', [
+                TenantDashboardController::class,
+                'complaints',
+            ]);
+
+            Route::post('/complaints', [
+                TenantDashboardController::class,
+                'storeComplaint',
+            ]);
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Tenant Maintenance Requests
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/maintenance-requests', [
+                TenantDashboardController::class,
+                'maintenanceRequests',
+            ]);
+        });
 
 
     /*
@@ -153,10 +240,10 @@ Route::prefix('tenant/payment-methods')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::get(
-            '/manager/dashboard',
-            [ManagerDashboardController::class, 'index']
-        );
+        Route::get('/manager/dashboard', [
+            ManagerDashboardController::class,
+            'index',
+        ]);
 
 
         /*

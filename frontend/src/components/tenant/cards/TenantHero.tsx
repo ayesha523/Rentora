@@ -25,10 +25,13 @@ function TenantHero({
       <div className="tenant-hero__content">
         <div className="tenant-hero__top">
           <div>
-            <span className="tenant-hero__eyebrow">Tenant Portal</span>
+            <span className="tenant-hero__eyebrow">
+              Tenant Portal
+            </span>
 
             <div className="tenant-hero__greeting">
-              <p>Good Morning,</p>
+              <p>Good Day,</p>
+
               <h1>
                 <span>{firstName || "Tenant"}</span> 👋
               </h1>
@@ -49,28 +52,44 @@ function TenantHero({
 
         <div className="tenant-hero__meta">
           <div>
-            <span className="tenant-hero__date">Next rent due</span>
-            <strong>{nextRentDue || "No rent data yet"}</strong>
+            <span className="tenant-hero__date">
+              Next rent due
+            </span>
+
+            <strong>
+              {nextRentDue || "No rent data yet"}
+            </strong>
           </div>
 
           <div>
-            <span className="tenant-hero__date">Active complaints</span>
-            <strong>{activeComplaints || "No active complaints"}</strong>
+            <span className="tenant-hero__date">
+              Active complaints
+            </span>
+
+            <strong>
+              {activeComplaints || "No active complaints"}
+            </strong>
           </div>
         </div>
 
         <p>
-          Everything about your home in one place. Stay updated, comfortable,
-          and connected with Rentora.
+          Everything about your home in one place. Stay updated,
+          comfortable, and connected with Rentora.
         </p>
 
         <div className="tenant-hero__buttons">
-          <Link to="/tenant/complaints/new" className="btn btn-rentora">
+          <Link
+            to="/tenant/complaints/new"
+            className="btn btn-rentora"
+          >
             <i className="bi bi-plus-lg me-2"></i>
             Submit Complaint
           </Link>
 
-          <Link to="/tenant/apartment" className="btn btn-secondary">
+          <Link
+            to="/tenant/apartment"
+            className="btn btn-secondary"
+          >
             View Apartment
             <i className="bi bi-arrow-right ms-2"></i>
           </Link>
@@ -80,7 +99,10 @@ function TenantHero({
       <div className="tenant-hero__image">
         <div className="tenant-hero__image-placeholder">
           <i className="bi bi-building"></i>
-          <span>{apartmentName || "No apartment assigned"}</span>
+
+          <span>
+            {apartmentName || "No apartment assigned"}
+          </span>
         </div>
       </div>
     </section>
