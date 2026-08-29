@@ -62,7 +62,10 @@ class User extends Authenticatable implements CanResetPasswordContract
     {
         return $this->belongsTo(Role::class);
     }
-
+    public function tenant()
+{
+    return $this->hasOne(Tenant::class);
+}
     /**
      * User manages many apartments.
      */
